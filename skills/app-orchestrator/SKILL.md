@@ -19,6 +19,7 @@ Todo el trabajo vive en un directorio `proyecto/.builder/` con estos artefactos:
 proyecto/
 ├── stack.md              ← configuración (la rellena el usuario antes de empezar)
 └── .builder/
+    ├── brief.md          ← Fase 0 (opcional, si la idea venía difusa)
     ├── discovery.md      ← Fase 1
     ├── prd.md            ← Fase 2 (requisitos con IDs RF-XX)
     ├── architecture.md   ← Fase 3 (incluye modelo de datos y contrato API)
@@ -27,6 +28,15 @@ proyecto/
     └── progress.md       ← estado de fases (lo mantienes tú)
 ```
 
+## Control de versiones (obligatorio)
+
+El proyecto debe estar bajo git desde el inicio. Si no lo está, ejecuta
+`git init` antes de la Fase 1. **Al cerrar cada gate, haz un commit del
+artefacto** con un mensaje trazable, p.ej. `✨ fase 2: prd.md (RF-01..RF-08)`.
+Esto convierte la trazabilidad por ID en trazabilidad *histórica*: se puede
+responder "¿cuándo y en qué fase se cayó el RF-07?". Sin versionado, la
+trazabilidad es solo una foto del momento.
+
 ## Flujo y gates
 
 Al empezar, comprueba qué existe ya en `.builder/` y retoma donde se quedó.
@@ -34,7 +44,8 @@ Mantén `progress.md` con el estado: `[ ]` pendiente, `[~]` en curso, `[x]` hech
 
 | Fase | Skill | Entra | Sale | Gate para avanzar |
 |------|-------|-------|------|-------------------|
-| 1 | app-discovery | idea + stack.md | discovery.md | problema, usuario y casos de uso definidos |
+| 0 *(opc.)* | app-brainstorm | idea difusa | brief.md | idea en una frase + problema real + confirmada por el usuario |
+| 1 | app-discovery | idea/brief.md + stack.md | discovery.md | problema, usuario y casos de uso definidos |
 | 2 | app-prd | discovery.md | prd.md | todos los requisitos con ID y criterios de aceptación |
 | 3 | app-architecture | prd.md + stack.md | architecture.md | modelo de datos + contrato API + threat model si hay datos sensibles |
 | 4 | app-mockup | prd.md | design-system.md + mockup/ | sistema de diseño definido + un mockup por flujo dentro del shell |
@@ -46,17 +57,70 @@ artefacto de la fase anterior existe y está completo (no vacío, sin secciones
 marcadas como TODO). Si falta algo, vuelve a esa fase antes de avanzar. Esto
 es lo que evita el "salto silencioso" donde se olvida algo.
 
+## Gate de stack (duro, antes de la Fase 1)
+
+Confirma que existe `stack.md` y que está **resuelto**, no solo presente. No
+basta con que el fichero exista: revisa explícitamente que
+
+- **no queda ningún `(definir...)`** sin resolver (sobre todo en **Auth** e **Infra**),
+- los campos de **Restricciones de negocio** están contestados (sí/no, no en blanco),
+- si el proyecto es legacy, la bandera de stack legacy (CI3) está marcada.
+
+Si queda algún placeholder o campo vacío, **párate aquí**: ayuda al usuario a
+resolverlo antes de la Fase 1. Un `stack.md` con `(definir)` revienta la Fase 3.
+
 ## Cómo conduces
 
-1. Si es proyecto nuevo: confirma que existe `stack.md` relleno. Si no, pide al
-   usuario que lo complete (o ayúdale a rellenarlo) antes de la Fase 1.
-2. Anuncia siempre en qué fase estás y qué vas a producir.
-3. Invoca la skill de la fase (cada fase tiene su propia skill: app-discovery,
-   app-prd, etc.). Sigue sus instrucciones.
-4. Al terminar una fase, comprueba su "Definition of Done", actualiza
-   `progress.md`, y resume al usuario qué se generó antes de proponer la siguiente.
-5. No avances sin confirmación del usuario en las fases de criterio (PRD y
-   arquitectura). En las mecánicas (mockup, scaffold) puedes encadenar más fluido.
+1. Aplica el **gate de stack** de arriba. No arranques la Fase 1 con `stack.md` a medias.
+2. **Decide si hace falta la Fase 0 (Brainstorm).** Si la idea aún es difusa
+   ("tengo una idea pero no la tengo clara", "ayúdame a pensarla"), arranca por
+   `app-brainstorm` para darle forma → `brief.md`. Si el usuario ya llega con la
+   idea clara, sáltala y ve directo a Discovery. Esta Fase 0 es el brainstorming
+   propio del proceso: sustituye a cualquier skill genérica de ideación.
+3. Anuncia siempre en qué fase estás y qué vas a producir.
+4. Invoca la skill de la fase (cada fase tiene su propia skill: app-brainstorm,
+   app-discovery, app-prd, etc.). Sigue sus instrucciones.
+5. Al terminar una fase, comprueba su "Definition of Done", actualiza
+   `progress.md`, **haz commit del artefacto**, y emite el bloque de handoff
+   (abajo) antes de proponer la siguiente.
+6. No avances sin confirmación del usuario en las fases de criterio (Brainstorm,
+   PRD y arquitectura). En las mecánicas (mockup, scaffold) puedes encadenar más fluido.
+
+## Handoff entre fases (formato fijo)
+
+Cada fase termina, y tú reportas, con este bloque. Es el contrato de entrega:
+hace la cadena auditable y deja claro qué entra en la fase siguiente.
+
+```
+── Handoff Fase N → N+1 ──
+Artefacto: .builder/<fichero> (commit <hash corto>)
+DoD: [x] todas las casillas marcadas  (o lista las que faltan)
+IDs nuevos/afectados: RF-01..RF-08, RNF-01
+Cambios retroactivos: ninguno  (o "actualizado prd.md: añadido RF-09, ver abajo")
+Siguiente fase: <nombre> — produce <artefacto>
+```
+
+## Skills de proceso (incluidas en este repo)
+
+Este proceso se apoya en skills incluidas en el propio repo (no en nada externo):
+
+- **Verificación con evidencia** (regla de oro del director): antes de dar por
+  cerrada CUALQUIER fase o de decir "hecho/funciona", exige evidencia (comando
+  ejecutado + salida vista). Nada de declarar éxito sin verificar.
+- **`code-review-excellence`**: tras el Scaffold (Fase 5) y antes de la
+  Auditoría (Fase 6), conduce una revisión estructurada del código.
+- **`testing`** y **`debugging-strategies`**: las usa la Fase 5 (ver su skill);
+  tú solo te aseguras de que se aplican.
+
+## Cambios retroactivos (el flujo no es de un solo sentido)
+
+El flujo va 1→6, pero en la práctica una fase descubre huecos de una anterior
+(la arquitectura revela un requisito que faltaba en el PRD; el mockup destapa un
+flujo no contemplado). Regla: **cuando una fase encuentra un hueco en un
+artefacto previo, no lo parchea en silencio**. Actualiza el artefacto anterior
+(con su ID nuevo), haz commit de esa corrección, y decláralo en el campo
+"Cambios retroactivos" del handoff. Así el PRD nunca queda por detrás de la
+realidad y la auditoría final cuadra.
 
 ## Qué automatizar — criterio que aplicas en Discovery y PRD
 
@@ -70,9 +134,39 @@ Cuando aparezca una tarea candidata a automatizar con IA, clasifícala:
 
 Registra esta decisión en el PRD para cada funcionalidad relevante.
 
+## Plantilla de progress.md
+
+Crea `.builder/progress.md` al arrancar y mantenlo en cada handoff:
+
+```markdown
+# Progreso — [Nombre del proyecto]
+
+Stack: [por defecto / legacy CI3]   ·   Última actualización: [fecha]
+
+| Fase | Artefacto | Estado | Commit |
+|------|-----------|--------|--------|
+| 0 Brainstorm *(opc.)* | brief.md | [ ] | — |
+| 1 Discovery    | discovery.md      | [ ] | — |
+| 2 PRD          | prd.md            | [ ] | — |
+| 3 Arquitectura | architecture.md   | [ ] | — |
+| 4 Mockup       | design-system.md + mockup/ | [ ] | — |
+| 5 Scaffold     | código            | [ ] | — |
+| 6 Auditoría    | audit.md          | [ ] | — |
+
+Estado: `[ ]` pendiente · `[~]` en curso · `[x]` hecho
+
+## Registro de IDs
+RF activos: —      RNF activos: —      CU activos: —
+
+## Cambios retroactivos
+[fecha] [fase que lo detecta] — qué se corrigió en qué artefacto previo
+```
+
 ## Definition of Done del proceso completo
 
-- [ ] Las 6 fases tienen su artefacto en `.builder/`
+- [ ] Las 6 fases (1–6) tienen su artefacto en `.builder/` *(la Fase 0 es opcional, no cuenta aquí)*
 - [ ] `audit.md` no reporta huecos críticos
-- [ ] Cada requisito RF-XX del PRD tiene correspondencia en arquitectura y código
-- [ ] `progress.md` con todas las fases en `[x]`
+- [ ] Cada requisito RF-XX del PRD tiene correspondencia en arquitectura, código y test
+- [ ] `progress.md` con todas las fases en `[x]` y cada una con su commit
+- [ ] Proyecto bajo git con un commit por fase
+- [ ] Cada cierre de fase verificado con evidencia (no "parece que funciona"): comando ejecutado + salida vista
