@@ -15,6 +15,12 @@ Lee `prd.md` y `stack.md`. Si el PRD no existe o tiene requisitos sin ID, no
 continúes: vuelve a la Fase 2. Cada decisión de arquitectura debe poder rastrearse
 a un RF-XX o RNF-XX.
 
+Comprueba en `stack.md` si el proyecto es **legacy (CI3)**. Si lo es, la
+arquitectura se expresa en sus términos (controladores/modelos/vistas de
+CodeIgniter 3, MySQL, query builder) en vez de Prisma/NestJS, y el contrato de
+API puede ser de rutas CI3 clásicas. El modelo de trazabilidad RF-XX no cambia;
+solo cambia la tecnología destino.
+
 ## Qué produces
 
 ### 1. Decisiones de stack y arquitectura
@@ -66,6 +72,18 @@ Relaciones: [...]
 ## 6. Trazabilidad
 Tabla RF-XX → entidad(es) → endpoint(s). Marca cualquier RF sin cubrir.
 ```
+
+## Skills incluidas (úsalas)
+
+Aplícalas en la pieza que les toca (todas vienen incluidas en el repo):
+
+- **API**: `api-design-principles` (REST/GraphQL coherente), `error-handling-patterns`
+  (contrato de errores).
+- **Auth** (según el campo *Auth* de `stack.md`): `auth-implementation-patterns`,
+  y la concreta — `jwt-security` o `nextauth-authentication`.
+- **Datos**: `postgresql-best-practices` + `prisma-development`.
+- **Seguridad / threat model**: `security-best-practices`, `security-review`.
+- **Operación**: `logging-best-practices` si el PRD pide trazas/auditoría.
 
 ## Definition of Done
 

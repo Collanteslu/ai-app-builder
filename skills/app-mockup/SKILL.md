@@ -15,13 +15,37 @@ coherente en toda la app.
 
 1. Lee `prd.md`. Cada pantalla debe corresponder a RF-XX. Si no hay PRD, vuelve
    a la Fase 2.
-2. **Lee y aplica la skill `frontend-design`** (en el entorno). Es la dirección
-   de diseño profesional; este mockup la sigue, no la ignora.
+2. Lee `stack.md`: si el proyecto es **legacy (CI3)**, el mockup debe poder
+   traducirse a vistas PHP/HTML clásicas (evita depender de componentes que solo
+   existan en React); mantén el HTML/CSS portable.
 3. **Fija una dirección visual.** Si el usuario no dio ninguna, pregúntale UNA
    referencia o estilo ("limpio tipo Linear", "serio tipo banca", "cálido y
    cercano"…). Si no responde o dice "tú decides", elige tú una dirección
    concreta justificada por el dominio del PRD y decláralo. Sin dirección, el
    resultado siempre tira a genérico.
+
+> **Skills de diseño incluidas (úsalas).** Dirección visual — `premium-frontend-ui`,
+> `ui-design`, `ux-design`; sistema y tokens — `design-system-patterns`;
+> calidad transversal — `responsive-design`, `accessibility-a11y`,
+> `interaction-design`; componentes — `shadcn` si el proyecto usa shadcn.
+> Aun así, los principios mínimos para no caer en el genérico están aquí abajo y
+> son obligatorios siempre.
+
+## Principios de diseño (autocontenidos, obligatorios)
+
+Para no producir el "look de IA por defecto", aplica estos seis principios. Son
+la dirección mínima incrustada; no requieren ninguna skill externa:
+
+1. **Una paleta intencional, no slate-100.** Elige un fondo y superficies con
+   carácter ligado al dominio; el gris azulado por defecto está prohibido.
+2. **Un acento de marca, con disciplina.** Un color de acento en toda la app;
+   los demás colores son semánticos (éxito/error), nunca "uno por pantalla".
+3. **Tipografía con personalidad.** Una display con carácter (uso comedido) +
+   una body legible, ambas reales (Google Fonts). La fuente del sistema sola = genérico.
+4. **Iconos reales, nunca emojis.** Lucide/SVG. Un emoji como icono de UI delata IA.
+5. **Jerarquía y espacio deliberados.** Tamaños, pesos y espaciado que guían el
+   ojo; no todo al mismo nivel dentro de tarjetas blancas iguales.
+6. **Un elemento firma.** Un detalle memorable que distingue la app — uno solo.
 
 ## Paso 1 — Sistema de diseño (design-system.md)
 

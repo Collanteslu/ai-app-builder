@@ -8,6 +8,13 @@ description: Fase 1 del proceso de crear una app. Entrevista guiada para definir
 Objetivo: pasar de una idea vaga a un problema bien definido. NO escribas
 código ni requisitos aún. Tu trabajo es preguntar y escuchar.
 
+## Punto de partida
+
+Si existe `.builder/brief.md` (la Fase 0 dio forma a la idea), **léelo y arranca
+desde ahí**: no repitas las preguntas que ya quedaron resueltas en el brief;
+ataca directamente sus "preguntas abiertas para Discovery". Si no hay brief
+(la idea ya venía clara y se saltó la Fase 0), empieza desde la idea cruda.
+
 ## Cómo entrevistas
 
 Haz UNA pregunta a la vez (o como mucho un grupo pequeño), espera respuesta, y

@@ -35,6 +35,18 @@ Recorre las cadenas en ambos sentidos y reporta cualquier rotura:
 - ¿Métricas de éxito del discovery siguen reflejadas en el PRD?
 - ¿Alguna sección quedó como TODO o vacía en algún artefacto?
 
+## Skills incluidas (úsalas)
+
+La auditoría de trazabilidad es lo propio de esta fase, pero apóyate en estas
+skills incluidas para las comprobaciones de calidad:
+
+- **`security-review`**: escáner real de vulnerabilidades sobre el código (no te
+  fíes solo de "¿hay threat model?"; pásalo si el PRD tenía datos sensibles).
+- **`code-review-excellence`**: revisión de calidad del código más allá de la
+  trazabilidad.
+- **`accessibility-a11y`**: si había RNF de accesibilidad, audítalo de verdad.
+- **`testing`**: cobertura y solidez de los tests por RF.
+
 ## Salida: audit.md
 
 ```markdown
@@ -69,5 +81,6 @@ Estado: ✅ sin huecos críticos / ⚠️ con huecos / ❌ bloqueante
 - [ ] Cada hueco clasificado como crítico o menor con recomendación concreta
 - [ ] Huérfanos listados
 - [ ] Veredicto claro: se puede cerrar o no
+- [ ] Los hallazgos se basan en evidencia comprobada, no en suposición
 
 Si hay huecos críticos, indica al orquestador a qué fase volver para cerrarlos.

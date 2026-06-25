@@ -78,6 +78,46 @@ A partir de los criterios de aceptación del PRD, implementa de verdad:
 Esto no es "lógica compleja opcional": son los criterios de aceptación. Si no
 están, el flujo no cumple su RF.
 
+## Ritmo: por flujo, con checkpoint (no todo de un disparo)
+
+No intentes renderizar la app entera en una sola pasada: degrada la calidad
+igual que el desarrollo IA que este proceso corrige. Construye **un flujo (o un
+rol) completo cada vez** y para en un checkpoint:
+
+1. Elige el siguiente flujo de mayor prioridad del PRD.
+2. Implementa su vertical slice entero y FUNCIONANDO (UI→endpoint→lógica→datos).
+3. Escribe su(s) test(s) (ver abajo) y comprueba que **el build compila/arranca**.
+4. Checkpoint: resume qué RF quedaron funcionando y haz commit antes del siguiente.
+
+Así, si algo se tuerce, se detecta en ese flujo y no contamina al resto. Si un
+build falla o un test no pasa, no parchees a ciegas: aplica la skill incluida
+**`debugging-strategies`** para ir a la causa raíz.
+
+## Tests (parte del build, no de la auditoría)
+
+La Fase 6 audita "RF → test", pero **los tests se escriben aquí**. Para cada
+**RF de prioridad alta**, escribe al menos un test que ejercite su criterio de
+aceptación (Dado/Cuando/Entonces), con el framework de `stack.md`
+(por defecto vitest; e2e con playwright para el flujo principal; o el framework
+del stack si es otro —PHPUnit en CI3 legacy—). El test lleva
+en su nombre o en un comentario el `RF-XX` que cubre, para que la auditoría lo
+enlace. Sin esto, la auditoría marcará huecos de test sistemáticamente.
+
+Aplica las skills incluidas **`testing`** y **`javascript-testing-patterns`**: el
+test del criterio de aceptación se escribe ANTES de la implementación del slice
+(estilo TDD), no después.
+
+## Skills incluidas (úsalas)
+
+Aplícalas en lo que les toca. Según el stack por defecto:
+`nextjs-app-router-patterns` / `nextjs-react-typescript` (front), `nodejs-backend-patterns`
+/ `api-development` (back), `prisma-development` (datos), `zod-schema-validation`
+(validación), `error-handling-patterns`, `react-query`/`react-state-management`,
+`tailwindcss`, `accessibility-a11y`. Testing: `testing`, `javascript-testing-patterns`,
+`e2e-testing-patterns`/`playwright`. Depuración: `debugging-strategies`.
+(Estas cubren el stack por defecto. Si cambias de stack —Supabase, Drizzle…—
+añade al repo la skill correspondiente.)
+
 ## Estructura del proyecto
 
 Según `stack.md` (por defecto Next.js + NestJS + Prisma; o CI3 si es legacy):
@@ -103,6 +143,8 @@ No cierres la fase hasta que TODO esto sea cierto:
 - [ ] Cada ROL del PRD tiene su login/acceso propio y su navegación
 - [ ] Cada pantalla del mockup tiene su componente real equivalente (misma UI y navegación)
 - [ ] Cada RF de prioridad alta se recorre de punta a punta y produce un resultado REAL (no un TODO)
+- [ ] Cada RF de prioridad alta tiene al menos un test que ejercita su criterio de aceptación, etiquetado con su RF-XX
+- [ ] El build **compila/arranca** sin errores y los tests pasan
 - [ ] Las validaciones que bloquean (licencia, categoría, disponibilidad) funcionan de verdad
 - [ ] Los cambios de estado se reflejan en los listados
 - [ ] Datos semilla realistas cargados (los de los mockups)
@@ -110,8 +152,10 @@ No cierres la fase hasta que TODO esto sea cierto:
 - [ ] README con instrucciones de arranque y mapa rol→pantalla→RF
 - [ ] Cada archivo de requisito con su comentario de trazabilidad
 
-Autocomprobación final antes de entregar: abre mentalmente la app como cada rol
-y recorre sus flujos de prioridad alta. Si alguno enseña un TODO o una pantalla
-rota, NO está hecho: complétalo antes de devolver el control al orquestador.
+Autocomprobación final antes de entregar (verificación con evidencia): no
+declares "funciona" de memoria. Arranca de verdad la app,
+ejecuta los tests y observa la salida; abre la app como cada rol y recorre sus
+flujos de prioridad alta. Si algo enseña un TODO, una pantalla rota o un test en
+rojo, NO está hecho: complétalo antes de devolver el control al orquestador.
 
 Cuando esté completo, devuelve el control al orquestador para la auditoría (Fase 6).
