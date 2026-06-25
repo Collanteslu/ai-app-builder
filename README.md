@@ -4,21 +4,53 @@ Conjunto de skills para Claude Code que conducen la creación de una app de
 principio a fin, fase por fase, con checklists, gates entre fases y trazabilidad
 por ID. Diseñado para que no se te cuele nada.
 
-## Las 7 skills
+**Autosuficiente:** el repo incluye TODAS las skills que necesita. Lo clonas y
+construyes una app desde cero sin instalar ni depender de nada externo. Son dos
+capas:
+
+1. **8 skills de orquestación** (`app-*`): conducen el proceso fase por fase.
+2. **32 skills de conocimiento**, solo las que las fases realmente invocan para el
+   stack por defecto (Next.js, NestJS, Prisma/PostgreSQL, auth, testing, seguridad,
+   diseño/UI, a11y…). Sin duplicados ni stacks que no usas. Vienen **dentro del
+   repo**, no se referencian de fuera. Si cambias de stack (p. ej. Supabase o
+   Drizzle), añades esa skill concreta y listo.
+
+## Las 8 skills de orquestación
 
 | Skill | Fase | Qué hace |
 |-------|------|----------|
 | `app-orchestrator` | Director | Conduce todo el flujo, comprueba los gates |
+| `app-brainstorm` | 0 *(opcional)* | Da forma a una idea difusa hablando → `brief.md` |
 | `app-discovery` | 1 | Entrevista guiada → `discovery.md` |
 | `app-prd` | 2 | Requisitos con IDs RF-XX → `prd.md` |
 | `app-architecture` | 3 | Datos + API + seguridad → `architecture.md` |
-| `app-mockup` | 4 | Wireframes navegables → `mockup/` |
-| `app-scaffold` | 5 | Código base derivado de todo → archivos |
+| `app-mockup` | 4 | Sistema de diseño + mockups navegables → `design-system.md` + `mockup/` |
+| `app-scaffold` | 5 | Primer build funcional + tests derivado de todo → archivos |
 | `app-audit` | 6 | Verifica trazabilidad → `audit.md` |
+
+Las 32 de conocimiento son el resto de carpetas dentro de `skills/`. El manifiesto
+completo (qué hace cada una, qué fase la usa y de dónde se copió) está en
+[`skills/INDEX.md`](skills/INDEX.md).
+
+**Autoridad — proceso vs. referencia.** Las `app-*` son **el proceso**: mandan
+cuando construyes una app desde cero (sigue las fases y sus gates). Las 32 de
+conocimiento son **referencia invocable en cualquier momento**: para un "testea
+esto" o "arregla este bug" sueltos, se usan directamente — no hace falta pasar por
+la Fase 0 ni por el flujo completo. Solo construir una app nueva entra por el
+orquestador.
+
+**Mantenimiento (evitar drift).** Las 32 son copias de un catálogo externo. Para
+ver si han quedado desfasadas o re-sincronizarlas:
+
+```bash
+scripts/sync-skills.sh --check    # informa de diferencias con la fuente
+scripts/sync-skills.sh --sync     # actualiza las copias desde la fuente
+# Fuente por defecto: ~/.agents/skills (cámbiala con SKILLS_SRC=/ruta ...)
+```
 
 ## Instalación en Claude Code
 
-Copia las skills a tu carpeta de skills de Claude Code:
+Copia TODAS las skills (orquestación + conocimiento) a tu carpeta de skills:
 
 ```bash
 # A nivel de usuario (disponibles en todos tus proyectos)
@@ -37,9 +69,16 @@ Simplemente dile a Claude Code:
 
 > "Quiero crear una aplicación para [tu idea]"
 
-El orquestador se dispara, comprueba que tienes `stack.md`, y arranca la Fase 1.
-A partir de ahí te va llevando. No tienes que invocar cada skill a mano: el
-orquestador llama a la de cada fase y verifica los gates.
+(o la frase de arranque inequívoca: **"inicia el constructor de apps"**).
+
+El orquestador se dispara, aplica el **gate de stack** (que `stack.md` exista y
+no tenga campos `(definir)` sin resolver), inicializa git si hace falta, y
+arranca. Si la idea aún es difusa ("tengo una idea pero no la tengo clara"),
+empieza por la **Fase 0 (Brainstorm)** para darle forma hablando antes de
+formalizar; si ya la tienes clara, salta directo a Discovery. A partir de ahí te
+va llevando: no tienes que invocar cada
+skill a mano. Al cerrar cada fase hace commit del artefacto y emite un bloque de
+handoff con lo generado y la fase siguiente.
 
 ## Por qué funciona (los 3 mecanismos)
 
@@ -50,6 +89,23 @@ orquestador llama a la de cada fase y verifica los gates.
 3. **Trazabilidad por ID**: cada requisito lleva un `RF-XX`. Arquitectura,
    mockup, código y tests lo referencian. La auditoría final comprueba que toda
    la cadena enlaza. Lo que no se mapea, se ha olvidado.
+
+Y dos refuerzos que lo sostienen:
+
+4. **Versionado por fase**: el proyecto va bajo git y cada gate cierra con un
+   commit del artefacto. La trazabilidad por ID deja de ser una foto y pasa a
+   ser histórica (cuándo y en qué fase cambió cada RF).
+5. **Cambios retroactivos declarados**: cuando una fase descubre un hueco en un
+   artefacto anterior, lo actualiza y lo declara en el handoff, en vez de
+   parchearlo en silencio. El PRD nunca queda por detrás de la realidad.
+
+> El sistema es **autosuficiente**: las skills de orquestación tiran de las skills
+> de conocimiento que vienen **incluidas en el repo**. Ejemplos: diseño
+> (`design-system-patterns`, `ui-design`) en el mockup; auth/API/datos
+> (`auth-implementation-patterns`, `api-design-principles`, `prisma-development`)
+> en arquitectura y scaffold; calidad (`testing`, `debugging-strategies`,
+> `security-review`, `code-review-excellence`) en scaffold y auditoría. Todo viaja
+> contigo: clonas el repo y funciona, sin instalar nada más.
 
 ---
 
