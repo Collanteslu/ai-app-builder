@@ -8,10 +8,14 @@
 #
 # Uso:
 #   scripts/sync-skills.sh --check     # solo informa de diferencias, no toca nada
-#   scripts/sync-skills.sh --sync      # copia desde la fuente (sobrescribe las copias)
+#   scripts/sync-skills.sh --sync      # copia desde la fuente (SOBRESCRIBE las copias)
 #   SKILLS_SRC=/otra/ruta scripts/sync-skills.sh --check   # fuente alternativa
 #
+# IMPORTANTE: ejecuta --check ANTES de --sync. --sync es destructivo: sobrescribe
+# cualquier edición local que hayas hecho a mano en las copias bajo skills/.
+#
 # Fuente por defecto: ~/.agents/skills  (ajústala con SKILLS_SRC si la tuya difiere).
+# Los .DS_Store se ignoran (no cuentan como drift).
 
 set -euo pipefail
 
@@ -43,9 +47,10 @@ for s in "${SKILLS[@]}"; do
     missing=$((missing+1))
     continue
   fi
-  if ! diff -rq "$SRC/$s" "$DEST/$s" >/dev/null 2>&1; then
+  if ! diff -rq --exclude=.DS_Store "$SRC/$s" "$DEST/$s" >/dev/null 2>&1; then
     if [[ "$MODE" == "--sync" ]]; then
       rm -rf "$DEST/$s" && cp -R "$SRC/$s" "$DEST/$s"
+      find "$DEST/$s" -name .DS_Store -delete   # coherencia con el --check
       echo "↻ $s — actualizada"
     else
       echo "≠ $s — DIFIERE de la fuente"
@@ -56,6 +61,14 @@ done
 
 echo "---"
 if [[ "$MODE" == "--sync" ]]; then
+  # Sella la fecha de última sincronización en el INDEX (hace visible el drift en el tiempo).
+  INDEX="$DEST/INDEX.md"
+  if [[ -f "$INDEX" ]] && grep -q "Última sincronización:" "$INDEX"; then
+    today="$(date +%Y-%m-%d)"
+    tmp="$(mktemp)"
+    sed -E "s/(Última sincronización:).*/\1 ${today} (fuente: ${SRC})/" "$INDEX" > "$tmp" && mv "$tmp" "$INDEX"
+    echo "Sello de fecha actualizado: $today"
+  fi
   echo "Sincronizadas: $drift · sin fuente: $missing · total: $total"
 else
   if [[ $drift -eq 0 && $missing -eq 0 ]]; then
