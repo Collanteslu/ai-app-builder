@@ -49,6 +49,14 @@ find "$REPO/template" -maxdepth 1 -mindepth 1 ! -name node_modules ! -name .next
   -exec cp -R {} "$PROJ/.claude/template/" \;
 echo "✅ template instalado en .claude/template"
 
+# 1c) Soporte opencode: .opencode (agentes, instrucciones, comandos) + opencode.json
+rm -rf "$PROJ/.opencode"
+mkdir -p "$PROJ/.opencode"
+find "$REPO/.opencode" -maxdepth 1 -mindepth 1 ! -name node_modules \
+  -exec cp -R {} "$PROJ/.opencode/" \;
+cp "$REPO/opencode.json" "$PROJ/opencode.json"
+echo "✅ .opencode + opencode.json instalados (soporte opencode)"
+
 # 2) Config de partida
 for f in stack.md model-profiles.md; do
   if [ -f "$REPO/config/$f" ] && [ ! -f "$PROJ/$f" ]; then

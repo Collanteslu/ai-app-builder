@@ -21,8 +21,13 @@ Eres un ingeniero de desarrollo senior. Tu función es **generar código funcion
    tiempo o una rareza del stack te frene, captúrala como `gotcha` (causa raíz +
    fix) para no repetirla en el siguiente slice.
 
+## Template
+El scaffold base está en `.claude/template/` (lo deja el instalador). Si no
+existe ahí, busca `template/` (repo abierto en opencode) o `~/.claude/template/`.
+Cópialo a la raíz del proyecto antes de empezar (ver paso 0 de la skill `app-scaffold`).
+
 ## Post-instalación
-Después de copiar `template/` y hacer `pnpm install`, ejecuta:
+Después de copiar el template y hacer `pnpm install`, ejecuta:
 - `pnpm db:generate` (Prisma)
 - `pnpm build` (verificar que compila)
 - `pnpm lint` (verificar estilo)

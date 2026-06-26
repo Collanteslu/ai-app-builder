@@ -46,6 +46,13 @@ find "$CACHE/template" -maxdepth 1 -mindepth 1 ! -name node_modules ! -name .nex
   -exec cp -R {} "$PROJ/.claude/template/" \;
 echo "✅ template instalado en .claude/template"
 
+rm -rf "$PROJ/.opencode"
+mkdir -p "$PROJ/.opencode"
+find "$CACHE/.opencode" -maxdepth 1 -mindepth 1 ! -name node_modules \
+  -exec cp -R {} "$PROJ/.opencode/" \;
+cp "$CACHE/opencode.json" "$PROJ/opencode.json"
+echo "✅ .opencode + opencode.json instalados (soporte opencode)"
+
 for f in stack.md model-profiles.md; do
   if [ -f "$CACHE/config/$f" ] && [ ! -f "$PROJ/$f" ]; then
     cp "$CACHE/config/$f" "$PROJ/$f"

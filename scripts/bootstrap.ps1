@@ -50,6 +50,14 @@ Get-ChildItem -Force -Path (Join-Path $cache 'template') -Exclude 'node_modules'
   Copy-Item -Recurse -Force -Destination $tplDest
 Write-Host "✅ template instalado en .claude\template"
 
+$ocDest = Join-Path $proj '.opencode'
+if (Test-Path $ocDest) { Remove-Item -Recurse -Force $ocDest }
+New-Item -ItemType Directory -Force -Path $ocDest | Out-Null
+Get-ChildItem -Force -Path (Join-Path $cache '.opencode') -Exclude 'node_modules' |
+  Copy-Item -Recurse -Force -Destination $ocDest
+Copy-Item -Force (Join-Path $cache 'opencode.json') (Join-Path $proj 'opencode.json')
+Write-Host "✅ .opencode + opencode.json instalados (soporte opencode)"
+
 foreach ($f in @('stack.md', 'model-profiles.md')) {
   $src = Join-Path $cache "config\$f"
   $dst = Join-Path $proj $f

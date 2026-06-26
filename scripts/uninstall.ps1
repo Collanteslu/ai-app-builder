@@ -48,6 +48,13 @@ if (Test-Path $skills) {
 $tpl = Join-Path (Split-Path $skills) 'template'
 if (Test-Path $tpl) { Remove-Item -Recurse -Force $tpl; Write-Host "🗑️  Template eliminado: $tpl" }
 
+if (-not $User) {
+  $oc = Join-Path (Get-Location) '.opencode'
+  $ocJson = Join-Path (Get-Location) 'opencode.json'
+  if (Test-Path $oc) { Remove-Item -Recurse -Force $oc; Write-Host "🗑️  .opencode eliminado" }
+  if (Test-Path $ocJson) { Remove-Item -Force $ocJson; Write-Host "🗑️  opencode.json eliminado" }
+}
+
 if ($All) {
   foreach ($f in @('stack.md', 'model-profiles.md')) {
     $p = Join-Path (Get-Location) $f

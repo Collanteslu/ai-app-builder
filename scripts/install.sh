@@ -38,6 +38,16 @@ find "$REPO/template" -maxdepth 1 -mindepth 1 ! -name node_modules ! -name .next
   -exec cp -R {} "$TPL_DEST/" \;
 echo "✅ template instalado en $TPL_DEST"
 
+# Soporte opencode (solo instalación de proyecto): .opencode + opencode.json en el cwd.
+if [ "$(dirname "$(dirname "$DEST")")" = "$(pwd)" ]; then
+  rm -rf "$(pwd)/.opencode"
+  mkdir -p "$(pwd)/.opencode"
+  find "$REPO/.opencode" -maxdepth 1 -mindepth 1 ! -name node_modules \
+    -exec cp -R {} "$(pwd)/.opencode/" \;
+  cp "$REPO/opencode.json" "$(pwd)/opencode.json"
+  echo "✅ .opencode + opencode.json instalados (soporte opencode)"
+fi
+
 # Punto de partida de configuración en el cwd (sin sobrescribir si ya existe).
 for f in stack.md model-profiles.md; do
   if [ ! -f "./$f" ] && [ -f "$REPO/config/$f" ]; then

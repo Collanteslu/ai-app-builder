@@ -29,6 +29,11 @@ if [ -d "$SKILLS" ]; then rm -rf "$SKILLS"; echo "🗑️  Skills eliminadas: $S
 TPL="$(dirname "$SKILLS")/template"
 if [ -d "$TPL" ]; then rm -rf "$TPL"; echo "🗑️  Template eliminado: $TPL"; fi
 
+if [ "$SCOPE" != "user" ]; then
+  [ -d "$(pwd)/.opencode" ] && rm -rf "$(pwd)/.opencode" && echo "🗑️  .opencode eliminado"
+  [ -f "$(pwd)/opencode.json" ] && rm -f "$(pwd)/opencode.json" && echo "🗑️  opencode.json eliminado"
+fi
+
 if [ "$ALL" -eq 1 ]; then
   for f in stack.md model-profiles.md; do
     [ -f "./$f" ] && rm "./$f" && echo "🗑️  Eliminado: $f"

@@ -50,6 +50,17 @@ Get-ChildItem -Force -Path (Join-Path $repo 'template') -Exclude 'node_modules',
   Copy-Item -Recurse -Force -Destination $tplDest
 Write-Host "✅ template instalado en $tplDest"
 
+# Soporte opencode (solo instalación de proyecto): .opencode + opencode.json en el cwd.
+if ($Project) {
+  $ocDest = Join-Path (Get-Location) '.opencode'
+  if (Test-Path $ocDest) { Remove-Item -Recurse -Force $ocDest }
+  New-Item -ItemType Directory -Force -Path $ocDest | Out-Null
+  Get-ChildItem -Force -Path (Join-Path $repo '.opencode') -Exclude 'node_modules' |
+    Copy-Item -Recurse -Force -Destination $ocDest
+  Copy-Item -Force (Join-Path $repo 'opencode.json') (Join-Path (Get-Location) 'opencode.json')
+  Write-Host "✅ .opencode + opencode.json instalados (soporte opencode)"
+}
+
 # Punto de partida de configuración en el cwd (sin sobrescribir si ya existe).
 foreach ($f in @('stack.md', 'model-profiles.md')) {
   $src = Join-Path $repo "config\$f"

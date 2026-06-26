@@ -59,8 +59,10 @@ ai-app-builder/            ← EL CONSTRUCTOR (caja de herramientas). Aquí: git
 └── skills/ scripts/ ...       NO es tu app.
 
 mi-app/                    ← TU APP. La creas tú; aquí se construye TODO.
-├── .claude/skills/            (1) las skills, copiadas por el instalador
+├── .claude/skills/            (1) las skills (Claude Code y opencode las leen)
 ├── .claude/template/          (1) scaffold base (Next.js); lo usa la Fase 5
+├── .opencode/                 (1) agentes, instrucciones y comando (opencode)
+├── opencode.json              (1) config de opencode
 ├── stack.md                   (1) config a rellenar
 ├── model-profiles.md          (1) perfiles de modelo por fase
 │   ── hasta aquí lo deja el instalador ──
