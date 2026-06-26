@@ -78,20 +78,30 @@ A partir de los criterios de aceptación del PRD, implementa de verdad:
 Esto no es "lógica compleja opcional": son los criterios de aceptación. Si no
 están, el flujo no cumple su RF.
 
-## Ritmo: por flujo, con checkpoint (no todo de un disparo)
+## Ritmo: TDD doble bucle por slice (formaliza la semilla previa)
 
-No intentes renderizar la app entera en una sola pasada: degrada la calidad
-igual que el desarrollo IA que este proceso corrige. Construye **un flujo (o un
-rol) completo cada vez** y para en un checkpoint:
+Esto formaliza y escala a doble bucle el "test antes del slice" que ya hacías.
+No renderices todo de golpe. Por cada slice de RF de **prioridad alta**:
 
-1. Elige el siguiente flujo de mayor prioridad del PRD.
-2. Implementa su vertical slice entero y FUNCIONANDO (UI→endpoint→lógica→datos).
-3. Escribe su(s) test(s) (ver abajo) y comprueba que **el build compila/arranca**.
-4. Checkpoint: resume qué RF quedaron funcionando y haz commit antes del siguiente.
+1. **Bucle externo (ATDD):** escribe primero el **test de aceptación** desde el
+   Dado/Cuando/Entonces del RF. Nace en rojo: define el "hecho" del slice.
+   Nivel por defecto **API/integración** (vitest+supertest o equivalente del
+   stack). El **e2e (playwright)** solo para el **flujo principal del PRD**, no
+   uno por RF.
+2. **Bucle interno (unit TDD):** implementa guiado por los **contratos del SDD
+   §8**. Por componente: test unitario desde el contrato (rojo) → código mínimo
+   (verde) → refactor. Repite hasta cubrir los componentes del slice.
+3. Slice cerrado cuando el test de aceptación pasa a **verde** (y sus unitarios).
+4. Etiqueta: aceptación con `RF-XX`; unitarios con el nombre del componente.
+5. **Checkpoint:** ejecuta la suite, debe estar **verde**, y haz commit antes
+   del siguiente slice. Si algo se queda rojo, aplica `debugging-strategies`.
 
-Así, si algo se tuerce, se detecta en ese flujo y no contamina al resto. Si un
-build falla o un test no pasa, no parchees a ciegas: aplica la skill incluida
-**`debugging-strategies`** para ir a la causa raíz.
+### Reglas de contrato (§8 ↔ tests)
+- **Drift:** si la implementación revela que un contrato §8 era incorrecto,
+  actualiza §8 en `architecture.md` (cambio retroactivo + commit) y ajusta el
+  test unitario al **contrato corregido** — nunca al revés.
+- **Precedencia aceptación > contrato:** si seguir el contrato no hace pasar la
+  aceptación, manda el RF: corrige §8 y, con él, el test unitario.
 
 ## Tests (parte del build, no de la auditoría)
 
@@ -103,9 +113,10 @@ del stack si es otro —PHPUnit en CI3 legacy—). El test lleva
 en su nombre o en un comentario el `RF-XX` que cubre, para que la auditoría lo
 enlace. Sin esto, la auditoría marcará huecos de test sistemáticamente.
 
-Aplica las skills incluidas **`testing`** y **`javascript-testing-patterns`**: el
-test del criterio de aceptación se escribe ANTES de la implementación del slice
-(estilo TDD), no después.
+Los tests nacen en dos niveles (ver "Ritmo: TDD doble bucle"): **aceptación**
+por RF (API/integración; e2e solo flujo principal) y **unitarios** por contrato
+§8. Skills de apoyo incluidas: `testing`, `javascript-testing-patterns`,
+`e2e-testing-patterns`/`playwright`. El framework según `stack.md`.
 
 ## Skills incluidas (úsalas)
 
@@ -143,7 +154,9 @@ No cierres la fase hasta que TODO esto sea cierto:
 - [ ] Cada ROL del PRD tiene su login/acceso propio y su navegación
 - [ ] Cada pantalla del mockup tiene su componente real equivalente (misma UI y navegación)
 - [ ] Cada RF de prioridad alta se recorre de punta a punta y produce un resultado REAL (no un TODO)
-- [ ] Cada RF de prioridad alta tiene al menos un test que ejercita su criterio de aceptación, etiquetado con su RF-XX
+- [ ] Cada RF de prioridad alta tiene un test de aceptación (escrito primero) en verde, etiquetado con su RF-XX
+- [ ] Cada componente implementado tiene tests unitarios derivados de su contrato §8
+- [ ] La suite completa (unit + aceptación + e2e principal) se ejecuta y pasa en el handoff, con evidencia (comando + salida); cero rojos/skip en prioridad alta
 - [ ] El build **compila/arranca** sin errores y los tests pasan
 - [ ] Las validaciones que bloquean (licencia, categoría, disponibilidad) funcionan de verdad
 - [ ] Los cambios de estado se reflejan en los listados
