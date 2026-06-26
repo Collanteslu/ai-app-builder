@@ -45,7 +45,7 @@ describe("skills - validación de SKILL.md", () => {
     const content = readFileSync(skillPath, "utf-8");
     const match = content.match(/^description:\s*(.+)/m);
     expect(match).not.toBeNull();
-    const desc = match![1].trim();
+    const desc = (match?.[1] ?? "").trim();
     expect(desc.length).toBeGreaterThan(0);
     expect(desc.length).toBeLessThanOrEqual(1024);
   });
