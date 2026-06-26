@@ -74,17 +74,69 @@ rol del PRD se quede sin entrada a la app.
 Construye por flujos completos siguiendo la prioridad del PRD. Para cada RF de
 **prioridad alta**, implementa el slice entero y FUNCIONANDO:
 
-  UI (del mockup) → llamada → endpoint → lógica mínima real → datos (seed/memoria) → respuesta visible
+  UI (del mockup) → llamada fetch() → endpoint → lógica mínima real → datos (seed/memoria) → respuesta visible
 
-"Funcionando" significa que el usuario hace la acción y ve un resultado real:
-- Reservar una franja añade la reserva y se ve reflejada.
-- Validar licencia caducada **bloquea** de verdad (no muestra un TODO).
-- Registrar entrega/devolución cambia el estado del arma y se ve en el listado.
-- La trazabilidad muestra el histórico real de lo que se ha hecho en la sesión.
+### REGLA FUNDAMENTAL: los datos NUNCA van inline en la página
+
+**Prohibido terminantemente:** arrays de datos mock dentro del componente/página.
+
+```tsx
+// ❌ NUNCA — datos inline en la página
+const products = [
+  { id: "1", title: "Audi A3 2019", status: "ACTIVE", price: "18.500€" },
+  ...
+]
+export default function ProductsPage() {
+  return <div>{products.map(...)}</div>  // LOS DATOS NO VIENEN DE UN ARRAY INLINE
+}
+```
+
+**Siempre:** los datos viven detrás de un endpoint. La página los obtiene con fetch():
+
+```tsx
+// ✅ SIEMPRE — la página llama al endpoint
+export default function ProductsPage() {
+  const [products, setProducts] = useState([])
+  useEffect(() => {
+    fetch("/api/products?sellerId=seller-1")
+      .then(r => r.json())
+      .then(data => setProducts(data.products ?? []))
+  }, [])
+  return <div>{products.map(...)}</div>
+}
+```
+
+Si no hay BD, los datos mock van DENTRO del endpoint, no en la página:
+
+```ts
+// ✅ Así sí — datos mock dentro del API route
+export async function GET() {
+  const products = [
+    { id: "1", title: "Audi A3 2019", status: "ACTIVE", price: "18.500€" },
+  ]
+  return NextResponse.json({ products })
+}
+```
+
+### Checker de wiring obligatorio
+
+Después de generar todas las páginas y endpoints, **verifica explícitamente**:
+
+1. Busca todos los `fetch('/api/` en los archivos de página.
+2. Para cada uno, comprueba que existe el archivo `src/app/api/[ruta]/route.ts`.
+3. Si falta el endpoint, créalo antes de seguir.
+4. Busca páginas que tengan arrays de datos mock (patrón `const .* = [` con objetos de datos).
+5. Si las encuentras, sustitúyelas por fetch() — si no existe el endpoint, créalo.
+
+Este paso es OBLIGATORIO y no se salta. El orquestador debe recibir confirmación
+de que se ha ejecutado.
+
+### Generación de datos semilla
 
 Usa una capa de datos sencilla con **datos semilla realistas** (los mismos del
-mockup: Glock 17, socio 0142, etc.) si la BD real aún no está conectada. Lo
-importante es que el flujo se recorra y haga algo, no que persista en producción.
+mockup) si la BD real aún no está conectada. Lo importante es que el flujo se
+recorra y haga algo, no que persista en producción. Pero los datos SEMPRE van
+detrás de un endpoint, nunca inline en la página.
 
 **Los TODO solo se permiten en RF de prioridad media/baja.** Y aun así, deben
 ser pantallas que cargan y se ven, con un aviso claro de "pendiente", nunca el
@@ -102,30 +154,79 @@ A partir de los criterios de aceptación del PRD, implementa de verdad:
 Esto no es "lógica compleja opcional": son los criterios de aceptación. Si no
 están, el flujo no cumple su RF.
 
-## Ritmo: TDD doble bucle por slice (formaliza la semilla previa)
+## Ritmo: TDD triple bucle por slice
 
-Esto formaliza y escala a doble bucle el "test antes del slice" que ya hacías.
 No renderices todo de golpe. Por cada slice de RF de **prioridad alta**:
 
-1. **Bucle externo (ATDD):** escribe primero el **test de aceptación** desde el
-   Dado/Cuando/Entonces del RF. Nace en rojo: define el "hecho" del slice.
-   Nivel por defecto **API/integración** (vitest+supertest o equivalente del
-   stack). El **e2e (playwright)** solo para el **flujo principal del PRD**, no
-   uno por RF.
-2. **Bucle interno (unit TDD):** implementa guiado por los **contratos del SDD
-   §8**. Por componente: test unitario desde el contrato (rojo) → código mínimo
-   (verde) → refactor. Repite hasta cubrir los componentes del slice.
-3. Slice cerrado cuando el test de aceptación pasa a **verde** (y sus unitarios).
-4. Etiqueta: aceptación con `RF-XX`; unitarios con el nombre del componente.
-5. **Checkpoint:** ejecuta la suite, debe estar **verde**, y haz commit antes
-   del siguiente slice. Si algo se queda rojo, aplica `debugging-strategies`.
+1. **Bucle 1 — API (aceptación):** escribe primero el **test de API** que llama
+   al endpoint real con fetch() y verifica la respuesta completa (código, cuerpo,
+   errores). Este test usa la base de datos real (via `prisma`). Nace en rojo.
+   Solo cuando el endpoint devuelve lo esperado, pasas al siguiente bucle.
+   
+   ```ts
+   // test-api-orders.ts — ejemplo
+   it("POST /api/orders crea una orden y devuelve 201", async () => {
+     const res = await fetch("http://localhost:3000/api/orders", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ productId: "...", buyerId: "user-1" }),
+     })
+     expect(res.status).toBe(201)
+     const body = await res.json()
+     expect(body.id).toBeDefined()
+     expect(body.status).toBe("PAID")
+   })
+   ```
+   
+   El **e2e (playwright)** solo para el **flujo principal del PRD**, no uno por RF.
+
+2. **Bucle 2 — Servicio (unidad):** implementa guiado por los **contratos del §8**.
+   Test unitario desde el contrato (rojo) → código mínimo (verde) → refactor.
+   Repite hasta cubrir los servicios del slice.
+
+3. **Bucle 3 — UI (integración):** escribe el test de la página que verifica que
+   la UI se renderiza y que llama al endpoint correcto. Para páginas cliente,
+   test de que el fetch() se dispara con los parámetros correctos. Este bucle
+   solo se activa cuando los bucles 1 y 2 están en verde.
+
+4. Slice cerrado cuando los tres bucles pasan a **verde**.
+5. Etiqueta: API con `RF-XX-api`; servicio con `RF-XX-svc`; UI con `RF-XX-ui`.
+6. **Checkpoint:** ejecuta la suite completa, debe estar **verde**, y haz commit
+   antes del siguiente slice. Si algo se queda rojo, aplica `debugging-strategies`.
+
+### Tests de API: estructura obligatoria
+
+Cada suite de API sigue este patrón:
+
+```ts
+import { describe, it, expect, beforeAll } from "vitest"
+
+const BASE = "http://localhost:3000/api"
+
+describe("RF-XX — [nombre del endpoint]", () => {
+  // Happy path
+  it("GET /api/... devuelve 200 con la lista", async () => { ... })
+  it("POST /api/... crea y devuelve 201", async () => { ... })
+
+  // Validaciones
+  it("POST /api/... sin campo obligatorio devuelve 400", async () => { ... })
+  it("GET /api/... con id inexistente devuelve 404", async () => { ... })
+
+  // Límites
+  it("POST /api/... con datos inválidos devuelve 422/400", async () => { ... })
+})
+```
+
+Cada suite de API cubre como mínimo: **happy path** (200/201), **validación** (400),
+**no encontrado** (404), y **conflicto** (409). Esto es el mínimo profesional
+para cualquier endpoint.
 
 ### Reglas de contrato (§8 ↔ tests)
 - **Drift:** si la implementación revela que un contrato §8 era incorrecto,
   actualiza §8 en `architecture.md` (cambio retroactivo + commit) y ajusta el
-  test unitario al **contrato corregido** — nunca al revés.
+  test al **contrato corregido** — nunca al revés.
 - **Precedencia aceptación > contrato:** si seguir el contrato no hace pasar la
-  aceptación, manda el RF: corrige §8 y, con él, el test unitario.
+  aceptación, manda el RF: corrige §8 y, con él, el test.
 
 ## Tests (parte del build, no de la auditoría)
 
@@ -175,17 +276,21 @@ Cada archivo que implementa un requisito lleva en cabecera:
 
 No cierres la fase hasta que TODO esto sea cierto:
 
+- [ ] **WIRING CHECK OK**: cada `fetch('/api/...')` en páginas tiene un archivo `route.ts` existente. Verificado con grep + glob.
+- [ ] **ZERO INLINE DATA**: ninguna página contiene arrays de datos mock. Verificado con grep de `const .* = \[` en páginas.
+- [ ] **API TESTS**: cada endpoint tiene test de API que cubre: happy path (200/201), validación (400), no encontrado (404), conflicto (409).
+- [ ] **SERVICE TESTS**: cada servicio tiene tests unitarios derivados de su contrato §8.
 - [ ] Cada ROL del PRD tiene su login/acceso propio y su navegación
 - [ ] Cada pantalla del mockup tiene su componente real equivalente (misma UI y navegación)
-- [ ] Cada RF de prioridad alta se recorre de punta a punta y produce un resultado REAL (no un TODO)
-- [ ] Cada RF de prioridad alta tiene un test de aceptación (escrito primero) en verde, etiquetado con su RF-XX
-- [ ] Cada componente implementado tiene tests unitarios derivados de su contrato §8
-- [ ] La suite completa (unit + aceptación + e2e principal) se ejecuta y pasa en el handoff, con evidencia (comando + salida); cero rojos/skip en prioridad alta
+- [ ] Cada RF de prioridad alta se recorre de punta a punta (UI → fetch → endpoint → DB → respuesta → UI) y produce un resultado REAL
+- [ ] Cada RF de prioridad alta tiene test de API en verde, etiquetado con `RF-XX-api`
+- [ ] Cada RF de prioridad alta tiene test de servicio en verde, etiquetado con `RF-XX-svc`
+- [ ] La suite completa (API + servicio + e2e) se ejecuta y pasa en el handoff, con evidencia (comando + salida); cero rojos/skip en prioridad alta
 - [ ] El build **compila/arranca** sin errores y los tests pasan
-- [ ] Las validaciones que bloquean (licencia, categoría, disponibilidad) funcionan de verdad
+- [ ] Las validaciones que bloquean funcionan de verdad (no son un TODO ni un alert)
 - [ ] Los cambios de estado se reflejan en los listados
-- [ ] Datos semilla realistas cargados (los de los mockups)
-- [ ] Cero páginas con texto crudo de endpoints o "TODO" en flujos de prioridad alta
+- [ ] Datos semilla realistas cargados (los del seed, conectados a los endpoints)
+- [ ] Cero páginas con arrays de datos mock, texto crudo de endpoints o "TODO" en flujos de prioridad alta
 - [ ] README con instrucciones de arranque y mapa rol→pantalla→RF
 - [ ] Cada archivo de requisito con su comentario de trazabilidad
 

@@ -26,11 +26,23 @@ Recorre las cadenas en ambos sentidos y reporta cualquier rotura:
 4. **RF → código**: ¿cada RF tiene un archivo con su comentario de trazabilidad?
 5. **RF → test**: ¿cada RF de prioridad alta tiene al menos un test?
 5b. **Suite en verde (gate de cierre duro):** ejecuta toda la suite (unit +
-   aceptación + e2e del flujo principal) y observa la salida. Un solo test en
-   rojo en prioridad alta → bloquea el cierre; indica al orquestador a qué fase
-   volver. Media/baja en `.skip` no bloquea.
-6. **Huérfanos inversos**: ¿hay endpoints, entidades o archivos que NO se mapean
-   a ningún RF? (señal de scope creep o de un requisito sin documentar)
+    aceptación + e2e del flujo principal) y observa la salida. Un solo test en
+    rojo en prioridad alta → bloquea el cierre; indica al orquestador a qué fase
+    volver. Media/baja en `.skip` no bloquea.
+6. **WIRING: fetch → endpoint**: busca todos los `fetch('/api/` en el código de
+   las páginas. Para cada uno, comprueba que existe el archivo `route.ts` en la
+   ruta correspondiente. Reporta los fetch huérfanos (sin endpoint) como
+   **hueco crítico**.
+7. **WIRING: endpoint → fetch**: busca todos los `route.ts` en `src/app/api/`.
+   Para cada endpoint POST/GET que devuelve datos, comprueba que al menos una
+   página lo llama con fetch(). Reporta endpoints huérfanos (sin página que los
+   consuma) como **hueco menor**.
+8. **ZERO INLINE DATA**: busca páginas que contengan arrays de datos mock
+   (patrón `const \w+ = [` seguido de objetos con propiedades de datos).
+   Reporta cualquier hallazgo como **hueco crítico** — los datos nunca deben
+   ir inline en las páginas.
+9. **Huérfanos inversos**: ¿hay endpoints, entidades o archivos que NO se mapean
+    a ningún RF? (señal de scope creep o de un requisito sin documentar)
 
 ## Comprobaciones de calidad
 

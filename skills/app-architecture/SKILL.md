@@ -37,14 +37,33 @@ sus campos. Marca qué entidad cubre qué requisito (RF-XX).
 Endpoints con método, ruta, entrada, salida y código de estado. Cada endpoint
 referencia el RF que implementa. Esto evita endpoints "huérfanos" sin requisito.
 
+**Requisito mínimo por entidad del modelo de datos:**
+Toda entidad que aparece en el modelo de datos debe tener, como mínimo:
+- `GET /api/[entidad]` — listar (con filtro por vendedor/usuario según el contexto)
+- `GET /api/[entidad]/[id]` — obtener uno
+- `POST /api/[entidad]` — crear
+- `PUT o PATCH /api/[entidad]/[id]` — actualizar (si la entidad es modificable)
+- `DELETE /api/[entidad]/[id]` — borrar (si aplica)
+
+Sin estos endpoints mínimos, el scaffold no puede conectar las páginas a los
+datos, y el sistema entero depende de arrays mock inline. La tabla de endpoints
+debe incluir el verbo, la ruta completa y el código de estado de éxito esperado
+(201 para creación, 200 para el resto).
+
 ### 4. Threat model (obligatorio si hay datos sensibles)
 Si el PRD tiene RNF de RGPD/seguridad: lista activos a proteger, amenazas,
 controles (autenticación, autorización, cifrado, auditoría) y qué RNF cubre cada uno.
 
 ### 5. Diseño de componentes/módulos
 Descompón cada flujo en componentes con responsabilidad única. Una tabla:
-módulo · responsabilidad · qué RF cubre · dependencias. Es el mapa de piezas
-que el scaffold construirá.
+módulo · responsabilidad · qué RF cubre · dependencias (incluyendo endpoints de
+los que depende). Es el mapa de piezas que el scaffold construirá.
+
+**Cada componente de página debe depender de al menos un endpoint.**
+Si un componente muestra datos (lista, detalle, formulario con opciones), debe
+tener un endpoint del que obtenerlos. La columna "dependencias" debe listar la
+ruta del endpoint del que depende. Si un componente no depende de ningún endpoint,
+es un candidato a tener datos mock inline y debe marcarse como riesgo en la auditoría.
 
 ### 6. Contratos de interfaz interna
 Por cada componente con comportamiento real (lógica, validación, cambios de
