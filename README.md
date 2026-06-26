@@ -63,13 +63,53 @@ cp -r skills/* .claude/skills/
 Copia `config/stack.md` a la raíz del proyecto donde vayas a trabajar y
 ajústalo a tu stack antes de empezar.
 
+## Instalación en opencode
+
+opencode carga automáticamente las skills desde `~/.claude/skills/`, por lo que
+la instalación para Claude Code funciona también para opencode. Además puedes
+instalarlas a nivel de proyecto:
+
+```bash
+# A nivel de usuario (disponibles en todos tus proyectos)
+cp -r skills/* ~/.claude/skills/
+
+# O a nivel de proyecto
+cp -r skills/* .opencode/skills/
+```
+
+El comando de entrada `/build-app` ya viene incluido en `.opencode/command/`.
+Para activar las skills desde el repo sin copiarlas, añade a tu `opencode.json`:
+
+```json
+{
+  "skills": {
+    "paths": ["ruta/al/repo/skills"]
+  }
+}
+```
+
+Copia `config/stack.md` a la raíz del proyecto donde vayas a trabajar y
+ajústalo a tu stack antes de empezar.
+
 ## Cómo se usa
 
-Simplemente dile a Claude Code:
+### En Claude Code
+
+Simplemente dile:
 
 > "Quiero crear una aplicación para [tu idea]"
 
 (o la frase de arranque inequívoca: **"inicia el constructor de apps"**).
+
+### En opencode
+
+Usa el comando incorporado:
+
+> `/build-app quiero crear una aplicación para [tu idea]`
+
+O simplemente dile al agente:
+
+> "Quiero crear una aplicación para [tu idea]"
 
 El orquestador se dispara, aplica el **gate de stack** (que `stack.md` exista y
 no tenga campos `(definir)` sin resolver), inicializa git si hace falta, y

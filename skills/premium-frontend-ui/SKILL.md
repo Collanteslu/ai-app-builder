@@ -1,9 +1,6 @@
 ---
 name: premium-frontend-ui
-description: 'A comprehensive guide for GitHub Copilot to craft immersive, high-performance web experiences with advanced motion, typography, and architectural craftsmanship.'
-metadata:
-  author: 'Utkarsh Patrikar'
-  author_url: 'https://github.com/utkarsh232005'
+description: Craft immersive, high-performance web experiences with advanced motion, typography, and architectural craftsmanship.
 ---
 
 # Immersive Frontend UI Craftsmanship
