@@ -30,3 +30,4 @@ jobs:
       - run: pnpm exec tsc --noEmit
       - run: pnpm test:run
       - run: pnpm build
+      - run: pnpm audit:builder   # gate de trazabilidad/wiring (exit≠0 = hueco crítico)

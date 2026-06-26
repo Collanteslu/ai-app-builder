@@ -60,7 +60,7 @@ memoria todavía, continúa: se irá creando con el primer `capture`.
 | 3 | app-architecture | prd.md + stack.md | architecture.md | modelo de datos + contrato API + threat model si hay datos sensibles |
 | 4 | app-mockup | prd.md | design-system.md + mockup/ | sistema de diseño definido + un mockup por flujo dentro del shell |
 | 5 | app-scaffold | todo lo anterior | código + tests | slices de prioridad alta en verde (aceptación + unit) y suite verde en el handoff |
-| 6 | app-audit | todo | audit.md | cero huecos críticos de trazabilidad |
+| 6 | app-audit | todo | audit.md | `pnpm audit:builder` con **exit 0** (cero CRÍTICOS) + cero huecos críticos de trazabilidad |
 
 **Regla de gate**: antes de invocar la skill de una fase, verifica que el
 artefacto de la fase anterior existe y está completo (no vacío, sin secciones
@@ -184,6 +184,7 @@ RF activos: —      RNF activos: —      CU activos: —
 ## Definition of Done del proceso completo
 
 - [ ] Las 6 fases (1–6) tienen su artefacto en `.builder/` *(la Fase 0 es opcional, no cuenta aquí)*
+- [ ] `pnpm audit:builder` ejecutado con **exit 0** (gate mecánico: cero CRÍTICOS); si exit≠0, el proceso NO cierra y vuelve a la Fase 5
 - [ ] `audit.md` no reporta huecos críticos
 - [ ] Cada requisito RF-XX del PRD tiene correspondencia en arquitectura, código y test
 - [ ] `progress.md` con todas las fases en `[x]` y cada una con su commit

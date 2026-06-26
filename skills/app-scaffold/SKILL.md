@@ -129,6 +129,28 @@ export async function GET() {
 }
 ```
 
+### REGLA: validación con Zod en el borde de la API
+
+Todo endpoint que lea el body (`await request.json()`) **valida con un esquema
+Zod** antes de tocar la lógica. Nada de `if (!campo) return 400` a mano: define
+`const Schema = z.object({...})` y `Schema.safeParse(body)`. Es lo mismo que ya
+haces en `src/lib/env.ts`, aplicado a cada entrada HTTP. El auditor lo comprueba
+(`NO-ZOD`).
+
+```ts
+// ✅ endpoint con validación Zod
+const Body = z.object({ sellerId: z.string(), title: z.string().min(1), price: z.number().nonnegative() });
+const parsed = Body.safeParse(await request.json());
+if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+```
+
+### REGLA: el servicio se usa, no se decora
+
+Si generas un servicio (`*-service.ts`), su endpoint **debe importarlo y usarlo**.
+Un servicio que no se importa en ninguna página ni route es código muerto: el
+auditor lo marca (`ORPHAN-SERVICE`). No dupliques la lógica del servicio dentro
+del `route.ts`.
+
 ### Checker de wiring obligatorio
 
 Después de generar todas las páginas y endpoints, **verifica explícitamente**:
@@ -425,6 +447,7 @@ Cada archivo que implementa un requisito lleva en cabecera:
 
 No cierres la fase hasta que TODO esto sea cierto:
 
+- [ ] **`pnpm audit:builder` con exit 0** antes del handoff (gate mecánico: cero CRÍTICOS — datos inline, fetch sin endpoint). Si falla, ciérralo antes de devolver el control.
 - [ ] **WIRING CHECK OK**: cada `fetch('/api/...')` en páginas tiene un archivo `route.ts` existente. Verificado con grep + glob.
 - [ ] **ZERO INLINE DATA**: ninguna página contiene arrays de datos mock.
 - [ ] **SEED IDS FIJOS**: todos los IDs que el frontend referencia están en el seed con el mismo valor.

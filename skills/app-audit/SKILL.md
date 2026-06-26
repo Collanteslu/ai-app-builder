@@ -72,103 +72,43 @@ Recorre las cadenas en ambos sentidos y reporta cualquier rotura:
 - ¿Métricas de éxito del discovery siguen reflejadas en el PRD?
 - ¿Alguna sección quedó como TODO o vacía en algún artefacto?
 
-## Auditoría ejecutable (script)
+## Auditoría ejecutable (gate duro)
 
-Todas las comprobaciones anteriores deben poder ejecutarse como script, no solo
-como lectura. El audit genera un archivo `audit.sh` (o `audit.ps1` en Windows)
-que el orquestador ejecuta para verificar:
+Las comprobaciones no se declaran "pasadas" de memoria: se **ejecutan**. El
+template incluye un auditor real, cross-platform (Node), en
+`scripts/audit.mjs`, disponible como script de npm:
 
 ```bash
-#!/bin/bash
-# audit.sh — comprobaciones automáticas de la Fase 6
-set -e
-
-echo "=== 1. WIRING: fetch → endpoint ==="
-for fetch in $(grep -roh "fetch(['\"]/api/[^'\"]*" src/ --include="*.tsx"); do
-  route=$(echo $fetch | sed "s|fetch(['\"]/api/||;s|['\"].*||")
-  if [ ! -f "src/app/api/$route/route.ts" ]; then
-    echo "❌ FETCH HUÉRFANO: /api/$route no tiene route.ts"
-    exit 1
-  fi
-done
-echo "✅ Todos los fetch tienen su endpoint"
-
-echo "=== 2. ZERO INLINE DATA ==="
-if grep -rn "const \w* = \[" src/app --include="*.tsx" | grep -v "test\|\.test\."; then
-  echo "❌ Se encontraron arrays de datos mock en páginas"
-  exit 1
-fi
-echo "✅ No hay datos mock inline"
-
-echo "=== 3. SEED IDS ==="
-for id in $(grep -roh '\(sellerId\|userId\|buyerId\): *"[^"]*"' src/app --include="*.tsx" | grep -o '"[^"]*"' | sort -u); do
-  if ! grep -q "$id" prisma/seed.ts; then
-    echo "❌ ID $id usado en frontend pero no en seed"
-    exit 1
-  fi
-done
-echo "✅ Todos los IDs del frontend están en el seed"
-
-echo "=== 4. COBERTURA MÍNIMA ==="
-for entity in $(ls src/app/api/ --directory); do
-  count=$(grep -c "it(" src/__tests__/api/$entity.test.ts 2>/dev/null || echo 0)
-  if [ "$count" -lt 5 ]; then
-    echo "⚠️  $entity tiene solo $count tests (mínimo 5)"
-  fi
-done
-echo "✅ Cobertura mínima verificada"
-
-echo "=== 5. TEST DB AISLADA ==="
-if grep -q "DATABASE_URL" src/__tests__/api/*.test.ts 2>/dev/null; then
-  echo "❌ Tests usan DATABASE_URL en vez de DATABASE_URL_TEST"
-  exit 1
-fi
-echo "✅ Tests usan DB aislada"
-
-echo "=== 6. AUTH REAL ==="
-if [ ! -f "src/app/api/auth/\[...nextauth\]/route.ts" ]; then
-  echo "❌ No existe el endpoint de NextAuth"
-  exit 1
-fi
-echo "✅ NextAuth configurado"
-
-echo "=== 7. CREATE/EDIT SYMMETRY (bucle) ==="
-for newpage in $(find src/app -name "new" -path "*/page.tsx" 2>/dev/null || true); do
-  dir=$(dirname "$(dirname "$newpage")")
-  entity=$(basename "$dir")
-  editpage="$dir/[id]/edit/page.tsx"
-  if [ ! -f "$editpage" ]; then
-    echo "❌ $entity: tiene new/ pero no [id]/edit/"
-    exit 1
-  fi
-  echo "✅ $entity: new → edit OK"
-done
-
-echo "=== 8. CRUD COMPLETO (bucle) ==="
-for listpage in $(find src/app/seller src/app/\(shop\) -name "page.tsx" ! -path "*/new/*" ! -path "*/edit/*" ! -path "*\[id\]/*" ! -path "*/api/*" 2>/dev/null || true); do
-  dir=$(dirname "$listpage")
-  entity=$(basename "$dir")
-  # Saltar layouts, login, register, etc que no son entidades CRUD
-  case "$entity" in
-    layout|login|register|profile|search|chats|orders|dashboard|api) continue;;
-  esac
-  # Solo entidades con new/ (creables)
-  if [ -d "$dir/new" ]; then
-    for page in "page.tsx" "[id]/page.tsx" "new/page.tsx" "[id]/edit/page.tsx"; do
-      if [ ! -f "$dir/$page" ]; then
-        echo "⚠️  $entity: falta $page"
-      fi
-    done
-    echo "✅ $entity: CRUD completo"
-  fi
-done
-
-echo ""
-echo "🎉 Auditoría completa — 0 huecos críticos"
+pnpm audit:builder      # = node scripts/audit.mjs
 ```
 
-Este script se ejecuta como parte del CI y antes de cada commit. Si falla,
-el orquestador no permite cerrar la Fase 6.
+**Esta es la regla de oro de la fase:** el cierre depende del **código de salida**,
+no de la narración del modelo. Si `audit:builder` devuelve **exit≠0**, hay un
+hueco **CRÍTICO** y el orquestador **NO puede cerrar la Fase 6** — vuelve a la
+Fase 5 a corregirlo. Pégale la salida real (no la resumas inventando).
+
+### Rúbrica de severidad (fija, no la degrades)
+
+El auditor clasifica con criterio FIJO. No bajes un crítico a menor para "poder
+cerrar":
+
+| Severidad | Regla | Qué detecta |
+|-----------|-------|-------------|
+| **CRÍTICO** (exit 1) | `INLINE-DATA` | arrays de datos mock dentro de una página |
+| **CRÍTICO** (exit 1) | `WIRING` | `fetch('/api/X')` sin su carpeta `src/app/api/X/` |
+| **AVISO** | `ORPHAN-SERVICE` | servicio que no se importa en ninguna página ni endpoint (capa de lógica muerta) |
+| **AVISO** | `NO-ZOD` | endpoint que lee el body sin validarlo con Zod |
+| **AVISO** | `E2E-PLACEHOLDER` | sin e2e real del flujo principal |
+| **AVISO** | `TEST-DB` | sin BD de test aislada (`docker-compose.test.yml`) |
+
+Los AVISOS no bloquean, pero se reportan en `audit.md` y conviene cerrarlos. Si
+tu juicio (leyendo el código) detecta un crítico que el script aún no cubre
+—p. ej. login simulado, IDs de seed inconsistentes, una entidad creable que no
+se puede editar— **decláralo crítico igualmente** y bloquea: el script es el
+suelo, no el techo.
+
+Las comprobaciones manuales de las secciones anteriores (CREATE/EDIT symmetry,
+seed IDs, auth real, CRUD completo) complementan al script con tu lectura.
 
 ## Skills incluidas (úsalas)
 
@@ -212,14 +152,14 @@ Estado: ✅ sin huecos críticos / ⚠️ con huecos / ❌ bloqueante
 
 ## Definition of Done
 
-- [ ] **Audit script ejecutado** (`audit.sh` o `audit.ps1`) y salida: 0 errores
+- [ ] **`pnpm audit:builder` ejecutado** y con **exit 0** (cero CRÍTICOS); la salida real se pega en `audit.md`. Exit≠0 → vuelve a la Fase 5
 - [ ] Matriz de trazabilidad completa, un RF por fila
 - [ ] Cada hueco clasificado como crítico o menor con recomendación concreta
 - [ ] Huérfanos listados
 - [ ] Veredicto claro: se puede cerrar o no
 - [ ] Los hallazgos se basan en evidencia comprobada, no en suposición
 - [ ] La suite completa se ha ejecutado contra la **test DB** y está en verde (evidencia: comando + salida); cero rojos en prioridad alta
-- [ ] Audit script incorporado al CI (`.github/workflows/ci.yml`)
+- [ ] `pnpm audit:builder` corre en el CI (`.github/workflows/ci.yml`) — ya viene del template
 - [ ] **CREATE/EDIT SYMMETRY**: bucle ejecutado y verificado — toda entidad creable es editable
 - [ ] Seed IDs verificados: todos los IDs del frontend existen en el seed
 - [ ] NextAuth real verificado: no hay login simulado

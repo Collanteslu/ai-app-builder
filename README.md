@@ -175,6 +175,12 @@ código, usa `scripts\uninstall.ps1` — ver [Desinstalar](#desinstalar-borrar-e
 - **Scripts de instalación** (`scripts/install.sh`, `scripts/install.ps1`): copian todas
   las skills a Claude Code y dejan `stack.md` + `model-profiles.md` en el cwd, sin copiar
   carpetas a mano.
+- **Gate de auditoría ejecutable** (`template/scripts/audit.mjs`, `pnpm audit:builder`):
+  la Fase 6 deja de ser declarativa. Un auditor real (Node, cross-platform) comprueba
+  datos inline, wiring `fetch→endpoint`, servicios huérfanos, validación Zod y BD de test,
+  y **devuelve exit≠0 ante un hueco crítico**. El cierre del proceso y el CI de la app
+  generada dependen del código de salida, no de la narración del modelo. Se instala con el
+  template, así que la app generada lo ejecuta con `pnpm audit:builder`.
 
 ## Las 9 skills de orquestación
 

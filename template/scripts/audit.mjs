@@ -1,0 +1,163 @@
+#!/usr/bin/env node
+// Auditoría ejecutable — gate de la Fase 6 del AI App Builder.
+//
+// Comprueba de VERDAD (no de memoria) los huecos que las skills definen como
+// bloqueantes y devuelve exit≠0 si encuentra alguno CRÍTICO. Así el cierre del
+// proceso depende del código de salida, no de la narración del modelo.
+//
+// Uso:  node scripts/audit.mjs        (o:  pnpm audit:builder)
+//
+// Severidad:
+//   CRÍTICO  → bloquea el cierre (exit 1). Datos inline, fetch sin endpoint,
+//              servicio huérfano (sin superficie en la app).
+//   AVISO    → no bloquea (exit 0), pero se reporta. Endpoint sin Zod, e2e
+//              placeholder, test DB no aislada.
+//
+// Opt-out puntual: añade `// audit-ignore` en la misma línea o la anterior.
+
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+
+const ROOT = process.cwd();
+const SRC = join(ROOT, "src");
+
+const critical = [];
+const warnings = [];
+const crit = (rule, file, msg) => critical.push({ rule, file, msg });
+const warn = (rule, file, msg) => warnings.push({ rule, file, msg });
+
+const DATA_KEYS = [
+  "id", "title", "name", "price", "description", "status", "email",
+  "image", "img", "date", "amount", "rating", "stock", "sku", "category",
+];
+
+function walk(dir, acc = []) {
+  if (!existsSync(dir)) return acc;
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) {
+      if (["node_modules", ".next", ".git", "generated"].includes(e.name)) continue;
+      walk(join(dir, e.name), acc);
+    } else {
+      acc.push(join(dir, e.name));
+    }
+  }
+  return acc;
+}
+
+const posix = (f) => relative(ROOT, f).split(sep).join("/");
+const read = (f) => readFileSync(f, "utf8");
+
+if (!existsSync(SRC)) {
+  console.log("ℹ️  No hay src/ — nada que auditar todavía.");
+  process.exit(0);
+}
+
+const files = walk(SRC);
+const apiRoutes = files.filter((f) => /\/app\/.*\/api\/|\/app\/api\//.test(posix(f)) && f.endsWith("route.ts"));
+const pages = files.filter((f) => f.endsWith(".tsx") && posix(f).includes("/app/") && !posix(f).includes("/api/") && !/\.test\./.test(posix(f)));
+const services = files.filter((f) => /\/services\/.*(service|validator)\.ts$/i.test(posix(f)) && !/\.test\./.test(posix(f)));
+
+// ── 1. CRÍTICO — datos mock inline en páginas ────────────────────────────────
+for (const f of pages) {
+  const src = read(f);
+  let m;
+  const re = /=\s*\[/g;
+  while ((m = re.exec(src)) !== null) {
+    const before = src.slice(Math.max(0, m.index - 120), m.index);
+    const lineStart = src.lastIndexOf("\n", m.index);
+    const prevLine = src.slice(src.lastIndexOf("\n", lineStart - 1), lineStart);
+    if (/audit-ignore/.test(before) || /audit-ignore/.test(prevLine)) continue;
+    const chunk = src.slice(m.index, m.index + 1200);
+    if (!chunk.includes("{")) continue;
+    const keys = new Set();
+    for (const km of chunk.matchAll(/(\w+)\s*:\s*["'`\d]/g)) {
+      if (DATA_KEYS.includes(km[1])) keys.add(km[1]);
+    }
+    if (keys.size >= 2) {
+      const lineNo = src.slice(0, m.index).split("\n").length;
+      crit("INLINE-DATA", `${posix(f)}:${lineNo}`, `array de datos inline (${[...keys].join(", ")}). Los datos van detrás de un endpoint, no en la página.`);
+      break; // un hallazgo por página basta
+    }
+  }
+}
+
+// ── 2. CRÍTICO — fetch a /api/... sin carpeta de endpoint ─────────────────────
+const apiDir = join(SRC, "app", "api");
+for (const f of [...pages, ...files.filter((x) => x.endsWith(".ts") && !x.endsWith("route.ts"))]) {
+  const src = read(f);
+  for (const fm of src.matchAll(/fetch\(\s*[`"']\/api\/([^`"'?\s)$]+)/g)) {
+    const first = fm[1].split("/")[0].replace(/\$\{.*$/, "").trim();
+    if (!first) continue;
+    if (!existsSync(join(apiDir, first))) {
+      const lineNo = src.slice(0, fm.index).split("\n").length;
+      crit("WIRING", `${posix(f)}:${lineNo}`, `fetch a /api/${fm[1]} pero no existe src/app/api/${first}/`);
+    }
+  }
+}
+
+// ── 3. CRÍTICO — servicio huérfano (no se importa en ningún sitio de la app) ──
+const appFiles = files.filter((f) => /\/app\//.test(posix(f)));
+for (const svc of services) {
+  const base = svc.split(sep).pop().replace(/\.ts$/, "");
+  const importedSomewhere = appFiles.some((f) => f !== svc && new RegExp(`/services/${base}["'\`]`).test(read(f)));
+  if (!importedSomewhere) {
+    warn("ORPHAN-SERVICE", posix(svc), `el servicio no se importa en ninguna página ni endpoint (capa de lógica sin superficie). Cablea su endpoint y su UI.`);
+  }
+}
+
+// ── 4. AVISO — endpoint que lee body sin validar con Zod ──────────────────────
+for (const r of apiRoutes) {
+  const src = read(r);
+  if (/\.json\(\)/.test(src) && /(req|request)\s*\.\s*json|await\s+\w*\.?json\(\)/.test(src)) {
+    if (!/from\s+["']zod["']/.test(src)) {
+      warn("NO-ZOD", posix(r), "lee el body de la petición sin validarlo con Zod (validación manual frágil).");
+    }
+  }
+}
+
+// ── 5. AVISO — e2e placeholder ────────────────────────────────────────────────
+const e2eDir = join(ROOT, "e2e");
+if (existsSync(e2eDir)) {
+  const specs = readdirSync(e2eDir).filter((f) => f.endsWith(".spec.ts"));
+  const real = specs.some((s) => {
+    const c = read(join(e2eDir, s));
+    return !/playwright\.dev|example\.com/.test(c) && c.length > 200;
+  });
+  if (!real) warn("E2E-PLACEHOLDER", "e2e/", "no hay un test e2e real del flujo principal (solo el ejemplo).");
+}
+
+// ── 6. AVISO — test DB no aislada (si hay tests y Prisma) ──────────────────────
+const hasTests = files.some((f) => /\.test\.ts$/.test(posix(f)));
+const usesPrisma = existsSync(join(ROOT, "prisma", "schema.prisma"));
+if (hasTests && usesPrisma && !existsSync(join(ROOT, "docker-compose.test.yml"))) {
+  warn("TEST-DB", "docker-compose.test.yml", "no existe la BD de test aislada; los tests comparten la BD de desarrollo.");
+}
+
+// ── Informe ───────────────────────────────────────────────────────────────────
+const line = "─".repeat(70);
+console.log(`\n${line}\n AUDITORÍA EJECUTABLE — gate de cierre\n${line}`);
+console.log(` Páginas: ${pages.length}  ·  Endpoints: ${apiRoutes.length}  ·  Servicios: ${services.length}\n`);
+
+if (critical.length === 0 && warnings.length === 0) {
+  console.log(" ✅ Sin huecos. Trazabilidad y wiring correctos.\n");
+  process.exit(0);
+}
+
+if (critical.length) {
+  console.log(` ❌ CRÍTICOS (${critical.length}) — bloquean el cierre:`);
+  for (const c of critical) console.log(`    • [${c.rule}] ${c.file}\n        ${c.msg}`);
+  console.log("");
+}
+if (warnings.length) {
+  console.log(` ⚠️  AVISOS (${warnings.length}) — no bloquean, pero conviene cerrarlos:`);
+  for (const w of warnings) console.log(`    • [${w.rule}] ${w.file}\n        ${w.msg}`);
+  console.log("");
+}
+
+console.log(line);
+if (critical.length) {
+  console.log(" Resultado: ❌ BLOQUEADO. Vuelve a la Fase 5 y cierra los críticos.\n");
+  process.exit(1);
+}
+console.log(" Resultado: ✅ Sin críticos (hay avisos por revisar).\n");
+process.exit(0);
