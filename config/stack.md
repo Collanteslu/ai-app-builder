@@ -6,7 +6,7 @@
 
 ## Stack
 
-- **Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind
+- **Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind
 - **Backend**: Next.js API Routes + Server Actions
 - **Base de datos**: PostgreSQL + Prisma
 - **Auth**: (definir: NextAuth / Clerk / propia con JWT)
