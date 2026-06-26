@@ -4,32 +4,30 @@
 > como contexto. Cópialo a la raíz del proyecto y ajústalo antes de empezar.
 > Lo que no apliques, déjalo en blanco o bórralo.
 
-## Stack por defecto
+## Stack
 
 - **Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind
-- **Backend**: NestJS + TypeScript
+- **Backend**: Next.js API Routes + Server Actions
 - **Base de datos**: PostgreSQL + Prisma
 - **Auth**: (definir: NextAuth / Clerk / propia con JWT)
-- **Infra**: (definir: Hetzner + Coolify / Vercel / VPS Docker)
+- **Infra**: (definir: Vercel / Docker + VPS)
 - **CI/CD**: GitHub Actions
-
-> Alternativa legacy (proyectos tipo Ridon): CodeIgniter 3 + PHP 7.4 + MySQL.
-> Si el proyecto es sobre este stack, indícalo aquí y las skills se adaptan.
 
 ## Librerías preferidas
 
 - Validación: zod
 - Tests: vitest + playwright (e2e)
 - Formularios: react-hook-form
-- ORM/queries: Prisma (o query builder de CI3 si es legacy)
-- PDF: DomPDF (legacy) / react-pdf
-- (añade las tuyas)
+- ORM/queries: Prisma
+- Estado cliente: Zustand
+- Data fetching: TanStack React Query (server + client)
+- PDF: react-pdf
 
 ## Convenciones
 
 - **Commits**: Conventional Commits en español con emoji (✨ feat, 🐛 fix, ♻️ refactor)
 - **Idioma del código**: identificadores en inglés, comentarios en español
-- **Gestión Git**: GitKraken, ramas feature/*
+- **Gestión Git**: ramas feature/*
 - **Estilo**: ESLint + Prettier
 
 ## Restricciones de negocio (rellenar por proyecto)
