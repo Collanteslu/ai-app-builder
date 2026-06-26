@@ -1,7 +1,7 @@
 # Diseño — SDD + TDD doble bucle + gate "todo en verde"
 
 **Fecha:** 2026-06-26
-**Estado:** aprobado (pendiente de implementación)
+**Estado:** implementado
 **Ámbito:** mejora del proceso del `ai-app-builder` (skills `app-*`). No añade
 artefactos ni skills nuevas; sube de nivel las fases 3, 5 y 6.
 
