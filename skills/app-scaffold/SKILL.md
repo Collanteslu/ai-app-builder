@@ -135,8 +135,146 @@ de que se ha ejecutado.
 
 Usa una capa de datos sencilla con **datos semilla realistas** (los mismos del
 mockup) si la BD real aún no está conectada. Lo importante es que el flujo se
-recorra y haga algo, no que persista en producción. Pero los datos SEMPRE van
+recorra y haga algo, no que persista en producción. Pero los datos SIEMPRE van
 detrás de un endpoint, nunca inline en la página.
+
+### REGLA: IDs fijos en seed (prohibido UUIDs aleatorios)
+
+Todo ID de usuario, rol o entidad de referencia que el frontend use de forma
+hardcodeada (`userId: "user-1"`, `sellerId: "seller-1"`) DEBE tener el mismo
+ID fijo en el seed. NUNCA uses UUIDs autogenerados para estos.
+
+```typescript
+// ❌ NUNCA — UUID aleatorio, el frontend no sabe cuál es
+const user = await prisma.user.create({
+  data: { name: "Demo", email: "demo@test.com" },
+})
+// El frontend hardcodea "seller-1" pero en DB el ID es otro → FK violation
+
+// ✅ SIEMPRE — ID fijo conocido
+const user = await prisma.user.create({
+  data: { id: "seller-1", name: "Vendedor Demo", email: "vendedor@demo.com" },
+})
+// El frontend usa "seller-1" y coincide con la DB
+```
+
+**Checklist de IDs fijos obligatorios en seed:**
+- Usuarios de prueba: `seller-1` (vendedor), `user-1` (comprador)
+- Cada entidad que el frontend referencie con un ID hardcodeado
+- Los IDs deben estar documentados en el README para que el usuario sepa
+  con qué credenciales probar
+
+### Auto-wiring por entidad: generación CRUD completa
+
+Cada entidad del modelo de datos genera automáticamente 5 archivos:
+
+```
+src/
+  app/api/[entidad]/route.ts          # GET list + POST create
+  app/api/[entidad]/[id]/route.ts     # GET one + PUT update + DELETE
+  app/(rol)/[entidad]/page.tsx        # Página de listado (consume GET list)
+  app/(rol)/[entidad]/[id]/page.tsx   # Página de detalle (consume GET one)
+  __tests__/api/[entidad].test.ts     # Tests API: happy + validación + 404 + 409
+```
+
+El scaffold debe generarlos en este orden y verificar que existen antes de seguir:
+1. API route (GET list + POST create)
+2. API route con [id] (GET one + PUT + DELETE)
+3. Página de listado que llama a `GET /api/[entidad]`
+4. Página de detalle que llama a `GET /api/[entidad]/[id]`
+5. Tests de API para el endpoint
+
+Si cualquiera de estos archivos falta al final del scaffold, el checker de
+wiring lo marca como hueco crítico y el orquestador no puede cerrar la fase.
+
+### Autenticación real (NextAuth) desde el primer slice
+
+NO generes login simulado. Desde el primer commit, la app tiene:
+
+- `src/app/api/auth/[...nextauth]/route.ts` con los providers del PRD
+- `src/lib/auth.ts` con la configuración de NextAuth
+- `src/lib/auth-config.ts` con los providers (credentials + OAuth si aplica)
+- Middleware que protege las rutas según el rol
+- Session provider en el layout raíz
+- Botón de login/logout funcional en el header
+- Hook `useSession` o `getServerSession` en cada página que necesite el usuario
+
+El scaffold NO puede generar páginas que usen `"seller-1"` hardcodeado como
+userId. Desde el principio, cada página obtiene el userId de la sesión:
+
+```tsx
+// ✅ SIEMPRE — userId de la sesión, no hardcodeado
+const { data: session } = useSession()
+const userId = session?.user?.id
+fetch(`/api/products?sellerId=${userId}`)
+```
+
+Si el PRD especifica autenticación (OAuth, email/password, etc.), el scaffold
+la implementa de verdad con NextAuth. No hay excusa para login simulado.
+
+### Base de datos de test aislada
+
+Los tests NO pueden compartir la base de datos de desarrollo. El scaffold
+genera:
+
+1. `docker-compose.test.yml` con PostgreSQL 17 en puerto diferente (5433)
+2. `DATABASE_URL_TEST` en `.env.test` apuntando a `localhost:5433/app_test`
+3. Script `pnpm db:test:setup` que: levanta test DB → migrate → seed
+4. Los tests de API usan `DATABASE_URL_TEST` (no `DATABASE_URL`)
+5. Cada suite de test limpia SOLO los datos que creó, nunca el seed
+6. El CI ejecuta los tests contra la test DB, no contra la de desarrollo
+
+```yaml
+# docker-compose.test.yml
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    ports: ["5433:5432"]
+    environment:
+      POSTGRES_DB: app_test
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+```
+
+```bash
+# package.json
+"db:test:setup": "docker compose -f docker-compose.test.yml up -d && DATABASE_URL=... prisma migrate deploy && DATABASE_URL=... prisma db seed"
+"test:run": "DATABASE_URL=$(grep DATABASE_URL_TEST .env.test | cut -d= -f2) vitest run"
+```
+
+### Tests API generados automáticamente
+
+Por cada endpoint, el scaffold genera un test en `src/__tests__/api/[entidad].test.ts`
+siguiendo esta plantilla:
+
+```typescript
+import { describe, it, expect, beforeAll, afterAll } from "vitest"
+import { NextRequest } from "next/server"
+import { GET as list, POST as create } from "@/app/api/[entidad]/route"
+import { GET as getOne, PUT as update, DELETE as remove } from "@/app/api/[entidad]/[id]/route"
+
+const BASE = "http://localhost:3000"
+
+describe("RF-XX — GET /api/[entidad]", () => {
+  it("devuelve 200 con la lista", async () => { ... })
+  it("filtra por parámetros", async () => { ... })
+  it("devuelve 400 si falta parámetro obligatorio", async () => { ... })
+})
+
+describe("RF-XX — POST /api/[entidad]", () => {
+  it("crea y devuelve 201", async () => { ... })
+  it("rechaza datos inválidos con 400", async () => { ... })
+  it("rechaza duplicado con 409", async () => { ... })
+})
+
+describe("RF-XX — GET /api/[entidad]/[id]", () => {
+  it("devuelve 200 con el detalle", async () => { ... })
+  it("devuelve 404 si no existe", async () => { ... })
+})
+```
+
+**Cobertura mínima:** 5 tests por endpoint (200, 201, 400, 404, 409).
+Si una entidad tiene menos de 5 tests al final del scaffold, el DoD lo bloquea.
 
 **Los TODO solo se permiten en RF de prioridad media/baja.** Y aun así, deben
 ser pantallas que cargan y se ven, con un aviso claro de "pendiente", nunca el
@@ -277,21 +415,26 @@ Cada archivo que implementa un requisito lleva en cabecera:
 No cierres la fase hasta que TODO esto sea cierto:
 
 - [ ] **WIRING CHECK OK**: cada `fetch('/api/...')` en páginas tiene un archivo `route.ts` existente. Verificado con grep + glob.
-- [ ] **ZERO INLINE DATA**: ninguna página contiene arrays de datos mock. Verificado con grep de `const .* = \[` en páginas.
-- [ ] **API TESTS**: cada endpoint tiene test de API que cubre: happy path (200/201), validación (400), no encontrado (404), conflicto (409).
+- [ ] **ZERO INLINE DATA**: ninguna página contiene arrays de datos mock.
+- [ ] **SEED IDS FIJOS**: todos los IDs que el frontend referencia están en el seed con el mismo valor.
+- [ ] **CRUD POR ENTIDAD**: cada entidad tiene sus 5 archivos (route list, route id, página list, página detail, tests). Verificado con glob.
+- [ ] **AUTH REAL**: login/registro usan NextAuth con session real, no simulado.
+- [ ] **TEST DB AISLADA**: los tests usan `DATABASE_URL_TEST`, no `DATABASE_URL`.
+- [ ] **API TESTS**: cada endpoint tiene test de API que cubre: happy path (200/201), validación (400), no encontrado (404), conflicto (409). Mínimo 5 tests por endpoint.
 - [ ] **SERVICE TESTS**: cada servicio tiene tests unitarios derivados de su contrato §8.
+- [ ] Cobertura total de tests >= 5 por entidad + 5 por servicio.
 - [ ] Cada ROL del PRD tiene su login/acceso propio y su navegación
 - [ ] Cada pantalla del mockup tiene su componente real equivalente (misma UI y navegación)
 - [ ] Cada RF de prioridad alta se recorre de punta a punta (UI → fetch → endpoint → DB → respuesta → UI) y produce un resultado REAL
 - [ ] Cada RF de prioridad alta tiene test de API en verde, etiquetado con `RF-XX-api`
 - [ ] Cada RF de prioridad alta tiene test de servicio en verde, etiquetado con `RF-XX-svc`
-- [ ] La suite completa (API + servicio + e2e) se ejecuta y pasa en el handoff, con evidencia (comando + salida); cero rojos/skip en prioridad alta
+- [ ] La suite completa (API + servicio + e2e) se ejecuta y pasa contra la **test DB**, no contra la de desarrollo
 - [ ] El build **compila/arranca** sin errores y los tests pasan
 - [ ] Las validaciones que bloquean funcionan de verdad (no son un TODO ni un alert)
 - [ ] Los cambios de estado se reflejan en los listados
-- [ ] Datos semilla realistas cargados (los del seed, conectados a los endpoints)
-- [ ] Cero páginas con arrays de datos mock, texto crudo de endpoints o "TODO" en flujos de prioridad alta
-- [ ] README con instrucciones de arranque y mapa rol→pantalla→RF
+- [ ] Datos semilla realistas cargados con IDs fijos (los del seed, conectados a los endpoints)
+- [ ] Cero páginas con arrays de datos mock, IDs hardcodeados, texto crudo de endpoints o "TODO" en flujos de prioridad alta
+- [ ] README con instrucciones de arranque, credenciales de prueba y mapa rol→pantalla→RF
 - [ ] Cada archivo de requisito con su comentario de trazabilidad
 
 Autocomprobación final antes de entregar (verificación con evidencia): no

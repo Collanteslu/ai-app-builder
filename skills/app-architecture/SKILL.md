@@ -33,6 +33,20 @@ encaja la IA si la hay (producción / interno / solo desarrollo).
 Entidades, atributos, relaciones, claves e índices. Una tabla por entidad con
 sus campos. Marca qué entidad cubre qué requisito (RF-XX).
 
+**Regla de IDs fijos en seed:**
+Toda entidad que el frontend vaya a referenciar con un ID hardcodeado
+(ej: `userId: "seller-1"`, `roleId: "admin"`) debe especificar su ID fijo
+en el modelo de datos. No se permiten UUIDs autogenerados para estas entidades.
+La columna "ID seed" debe incluir el valor exacto que tendrá en el seed:
+
+| Campo | Tipo | ID seed | Notas |
+|-------|------|---------|-------|
+| id | String (UUID) | `seller-1` | ID fijo conocido por el frontend |
+
+La tabla de trazabilidad debe incluir una columna "ID seed" para cada entidad
+que el frontend referencie directamente. Esto evita el error más común:
+el frontend usa un ID que no existe en la DB.
+
 ### 3. Contrato de API
 Endpoints con método, ruta, entrada, salida y código de estado. Cada endpoint
 referencia el RF que implementa. Esto evita endpoints "huérfanos" sin requisito.
@@ -53,6 +67,20 @@ debe incluir el verbo, la ruta completa y el código de estado de éxito esperad
 ### 4. Threat model (obligatorio si hay datos sensibles)
 Si el PRD tiene RNF de RGPD/seguridad: lista activos a proteger, amenazas,
 controles (autenticación, autorización, cifrado, auditoría) y qué RNF cubre cada uno.
+
+### 4b. Arquitectura de autenticación (obligatorio, siempre)
+El contrato de API debe incluir los endpoints de autenticación real (NextAuth):
+- `GET/POST /api/auth/[...nextauth]` — ruta catch-all de NextAuth
+- Especificar qué providers: credentials, Google, GitHub (según PRD)
+- El threat model debe asumir autenticación real desde el día 1, no simulada
+
+### 4c. Base de datos de test (obligatorio)
+La arquitectura debe especificar una base de datos PostgreSQL separada para tests:
+- Puerto: 5433 (distinto de la DB de desarrollo 5432)
+- Nombre: `app_test`
+- La DB de test se levanta con `docker-compose.test.yml`
+- Los tests NUNCA usan `DATABASE_URL` (desarrollo), siempre `DATABASE_URL_TEST`
+- El seed de test contiene los mismos IDs fijos que el seed de desarrollo
 
 ### 5. Diseño de componentes/módulos
 Descompón cada flujo en componentes con responsabilidad única. Una tabla:
@@ -134,6 +162,9 @@ Aplícalas en la pieza que les toca (todas vienen incluidas en el repo):
 ## Definition of Done
 
 - [ ] Cada RF del PRD aparece en la tabla de trazabilidad con su entidad y endpoint
+- [ ] **IDs fijos**: cada entidad referenciada por el frontend tiene un ID seed documentado en el modelo
+- [ ] **Auth real**: los endpoints de NextAuth están especificados en el contrato de API (no login simulado)
+- [ ] **Test DB**: la BD de test (puerto 5433) está especificada con su docker-compose
 - [ ] Modelo de datos con tipos, claves y relaciones (no solo nombres)
 - [ ] Contrato de API: ningún endpoint sin RF, ningún RF sin endpoint (salvo justificado)
 - [ ] Threat model presente si había datos sensibles en el PRD
