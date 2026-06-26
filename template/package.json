@@ -1,0 +1,54 @@
+{
+  "name": "app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.10.0",
+  "dependencies": {
+    "next": "16.2.9",
+    "react": "19.1.2",
+    "react-dom": "19.1.2",
+    "@prisma/client": "7.8.0",
+    "zod": "4.4.3",
+    "zustand": "5.0.14",
+    "@tanstack/react-query": "5.101.1",
+    "react-hook-form": "7.78.0",
+    "react-pdf": "9.3.0"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "@types/node": "22.15.0",
+    "@types/react": "19.1.4",
+    "@types/react-dom": "19.1.5",
+    "tailwindcss": "4.3.1",
+    "@tailwindcss/postcss": "4.3.1",
+    "postcss": "8.5.3",
+    "prisma": "7.8.0",
+    "@prisma/adapter-pg": "7.8.0",
+    "pg": "8.14.1",
+    "vitest": "4.1.9",
+    "@playwright/test": "1.61.1",
+    "@vitejs/plugin-react": "4.5.3",
+    "eslint": "9.28.0",
+    "@eslint/eslintrc": "3.3.1",
+    "dotenv": "16.5.0"
+  }
+}

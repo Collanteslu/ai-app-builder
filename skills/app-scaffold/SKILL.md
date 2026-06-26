@@ -12,6 +12,20 @@ de prioridad alta debe FUNCIONAR de punta a punta, aunque sea con datos en memor
 
 ## Antes de empezar (gate de entrada)
 
+### 0. Copia los ficheros pinned de `template/`
+
+Los versionados exactos están en `template/`. Cópialos antes de hacer nada:
+
+    xcopy /E template\* destino\
+    cd destino
+    pnpm install
+
+Esto te da: `.nvmrc`, `.npmrc` (pnpm + `save-exact=true`), `package.json`
+(versiones fijas sin `^`), `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`,
+`globals.css` (Tailwind v4 con `@theme`), y `.gitignore`.
+
+### 1. Lee los docs del proyecto
+
 Lee, en este orden y de verdad:
 1. `stack.md` — stack y convenciones.
 2. `prd.md` — requisitos con sus RF-XX, prioridades y roles.
