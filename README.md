@@ -60,10 +60,12 @@ ai-app-builder/            ← EL CONSTRUCTOR (caja de herramientas). Aquí: git
 
 mi-app/                    ← TU APP. La creas tú; aquí se construye TODO.
 ├── .claude/skills/            (1) las skills, copiadas por el instalador
+├── .claude/template/          (1) scaffold base (Next.js); lo usa la Fase 5
 ├── stack.md                   (1) config a rellenar
+├── model-profiles.md          (1) perfiles de modelo por fase
 │   ── hasta aquí lo deja el instalador ──
 ├── .builder/                  (2) Claude: discovery, prd, architecture, memory/...
-├── src/  prisma/  package.json (2) Claude: el código (Fase 5)
+├── src/  prisma/  package.json (2) Claude: copia el template y escribe el código (Fase 5)
 └── .git/                      (2) un commit por fase
 ```
 

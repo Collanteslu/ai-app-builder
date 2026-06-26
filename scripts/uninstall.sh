@@ -26,6 +26,9 @@ if [ "$SCOPE" = "user" ]; then SKILLS="$HOME/.claude/skills"; else SKILLS="$(pwd
 
 if [ -d "$SKILLS" ]; then rm -rf "$SKILLS"; echo "🗑️  Skills eliminadas: $SKILLS"; else echo "ℹ️  No hay skills en: $SKILLS"; fi
 
+TPL="$(dirname "$SKILLS")/template"
+if [ -d "$TPL" ]; then rm -rf "$TPL"; echo "🗑️  Template eliminado: $TPL"; fi
+
 if [ "$ALL" -eq 1 ]; then
   for f in stack.md model-profiles.md; do
     [ -f "./$f" ] && rm "./$f" && echo "🗑️  Eliminado: $f"

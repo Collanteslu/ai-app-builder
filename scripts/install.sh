@@ -30,6 +30,14 @@ cp -R "$REPO/skills/"* "$DEST/"
 count=$(find "$REPO/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 echo "✅ $count skills instaladas."
 
+# Template (scaffold base de Fase 5) junto a las skills, excluyendo node_modules/.next
+TPL_DEST="$(dirname "$DEST")/template"
+rm -rf "$TPL_DEST"
+mkdir -p "$TPL_DEST"
+find "$REPO/template" -maxdepth 1 -mindepth 1 ! -name node_modules ! -name .next \
+  -exec cp -R {} "$TPL_DEST/" \;
+echo "✅ template instalado en $TPL_DEST"
+
 # Punto de partida de configuración en el cwd (sin sobrescribir si ya existe).
 for f in stack.md model-profiles.md; do
   if [ ! -f "./$f" ] && [ -f "$REPO/config/$f" ]; then

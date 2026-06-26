@@ -40,6 +40,12 @@ cp -R "$CACHE/skills/"* "$PROJ/.claude/skills/"
 count=$(find "$CACHE/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 echo "✅ $count skills instaladas en .claude/skills"
 
+rm -rf "$PROJ/.claude/template"
+mkdir -p "$PROJ/.claude/template"
+find "$CACHE/template" -maxdepth 1 -mindepth 1 ! -name node_modules ! -name .next \
+  -exec cp -R {} "$PROJ/.claude/template/" \;
+echo "✅ template instalado en .claude/template"
+
 for f in stack.md model-profiles.md; do
   if [ -f "$CACHE/config/$f" ] && [ ! -f "$PROJ/$f" ]; then
     cp "$CACHE/config/$f" "$PROJ/$f"

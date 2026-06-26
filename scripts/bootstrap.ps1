@@ -43,6 +43,13 @@ Copy-Item -Recurse -Force -Path (Join-Path $cache 'skills\*') -Destination $skil
 $count = (Get-ChildItem -Directory (Join-Path $cache 'skills')).Count
 Write-Host "✅ $count skills instaladas en .claude\skills"
 
+$tplDest = Join-Path $proj '.claude\template'
+if (Test-Path $tplDest) { Remove-Item -Recurse -Force $tplDest }
+New-Item -ItemType Directory -Force -Path $tplDest | Out-Null
+Get-ChildItem -Force -Path (Join-Path $cache 'template') -Exclude 'node_modules', '.next' |
+  Copy-Item -Recurse -Force -Destination $tplDest
+Write-Host "✅ template instalado en .claude\template"
+
 foreach ($f in @('stack.md', 'model-profiles.md')) {
   $src = Join-Path $cache "config\$f"
   $dst = Join-Path $proj $f

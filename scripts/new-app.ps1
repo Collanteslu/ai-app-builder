@@ -44,6 +44,14 @@ Copy-Item -Recurse -Force -Path (Join-Path $repo 'skills\*') -Destination $skill
 $count = (Get-ChildItem -Directory (Join-Path $repo 'skills')).Count
 Write-Host "✅ $count skills instaladas en .claude\skills"
 
+# 1b) Template (scaffold base de Fase 5), excluyendo node_modules/.next
+$tplDest = Join-Path $Path '.claude\template'
+if (Test-Path $tplDest) { Remove-Item -Recurse -Force $tplDest }
+New-Item -ItemType Directory -Force -Path $tplDest | Out-Null
+Get-ChildItem -Force -Path (Join-Path $repo 'template') -Exclude 'node_modules', '.next' |
+  Copy-Item -Recurse -Force -Destination $tplDest
+Write-Host "✅ template instalado en .claude\template"
+
 # 2) Config de partida
 foreach ($f in @('stack.md', 'model-profiles.md')) {
   $src = Join-Path $repo "config\$f"

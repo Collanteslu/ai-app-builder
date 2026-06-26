@@ -12,17 +12,28 @@ de prioridad alta debe FUNCIONAR de punta a punta, aunque sea con datos en memor
 
 ## Antes de empezar (gate de entrada)
 
-### 0. Copia los ficheros pinned de `template/`
+### 0. Copia los ficheros pinned del template
 
-Los versionados exactos están en `template/`. Cópialos antes de hacer nada:
+Los versionados exactos están en el template. **Localiza primero la carpeta del
+template** (varía según cómo se instaló el constructor), en este orden:
+
+1. `.claude/template/` — instalado en el proyecto (vía `new-app`/`bootstrap`/`install`).
+2. `template/` — repo del constructor abierto directamente (opencode).
+3. `~/.claude/template/` — instalación global de Claude Code.
+
+Usa la primera que exista como `ORIGEN` y cópiala a la raíz del proyecto
+(`destino` = raíz de la app, normalmente el directorio actual):
 
     # Windows (PowerShell):
-    Copy-Item -Recurse -Path template\* -Destination destino\
+    Copy-Item -Recurse -Path .claude\template\* -Destination .\
     # macOS / Linux:
-    # cp -r template/. destino/   # el . incluye dotfiles
+    # cp -r .claude/template/. ./   # el . incluye dotfiles
 
-    Set-Location -LiteralPath destino
     pnpm install
+
+Si NINGUNA de las tres rutas existe, párate y avisa al orquestador: el template
+no se instaló. No improvises un `package.json` a mano (perderías las versiones
+pinned y las configs probadas).
 
 Esto te da: `.nvmrc`, `.npmrc` (pnpm + `save-exact=true`), `package.json`
 (versiones fijas sin `^`), `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`,

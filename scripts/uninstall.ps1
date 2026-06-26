@@ -45,6 +45,9 @@ if (Test-Path $skills) {
   Write-Host "ℹ️  No hay skills en: $skills"
 }
 
+$tpl = Join-Path (Split-Path $skills) 'template'
+if (Test-Path $tpl) { Remove-Item -Recurse -Force $tpl; Write-Host "🗑️  Template eliminado: $tpl" }
+
 if ($All) {
   foreach ($f in @('stack.md', 'model-profiles.md')) {
     $p = Join-Path (Get-Location) $f
