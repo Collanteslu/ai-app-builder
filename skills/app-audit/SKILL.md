@@ -25,6 +25,10 @@ Recorre las cadenas en ambos sentidos y reporta cualquier rotura:
 3. **RF → mockup**: ¿cada RF de prioridad alta tiene una pantalla que lo representa?
 4. **RF → código**: ¿cada RF tiene un archivo con su comentario de trazabilidad?
 5. **RF → test**: ¿cada RF de prioridad alta tiene al menos un test?
+5b. **Suite en verde (gate de cierre duro):** ejecuta toda la suite (unit +
+   aceptación + e2e del flujo principal) y observa la salida. Un solo test en
+   rojo en prioridad alta → bloquea el cierre; indica al orquestador a qué fase
+   volver. Media/baja en `.skip` no bloquea.
 6. **Huérfanos inversos**: ¿hay endpoints, entidades o archivos que NO se mapean
    a ningún RF? (señal de scope creep o de un requisito sin documentar)
 
@@ -57,10 +61,10 @@ Estado: ✅ sin huecos críticos / ⚠️ con huecos / ❌ bloqueante
 [Conteo: X RF totales, Y completamente trazados, Z con hueco]
 
 ## Matriz de trazabilidad
-| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test | Estado |
-|----|-----------|-----|--------------|--------|--------|------|--------|
-| RF-01 | CU-01 | ✅ | ✅ | ✅ | ✅ | ✅ | OK |
-| RF-02 | CU-02 | ✅ | ✅ | ❌ | ⚠️ | ❌ | hueco |
+| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test acept. (verde/rojo) | Contrato/comp. (sí/no) | Estado |
+|----|-----------|-----|--------------|--------|--------|--------------------------|------------------------|--------|
+| RF-01 | CU-01 | ✅ | ✅ | ✅ | ✅ | verde | sí | OK |
+| RF-02 | CU-02 | ✅ | ✅ | ❌ | ⚠️ | rojo | no | hueco |
 
 ## Huecos detectados
 ### Críticos (bloquean cierre)
@@ -82,5 +86,6 @@ Estado: ✅ sin huecos críticos / ⚠️ con huecos / ❌ bloqueante
 - [ ] Huérfanos listados
 - [ ] Veredicto claro: se puede cerrar o no
 - [ ] Los hallazgos se basan en evidencia comprobada, no en suposición
+- [ ] La suite completa se ha ejecutado y está en verde (evidencia: comando + salida); cero rojos en prioridad alta
 
 Si hay huecos críticos, indica al orquestador a qué fase volver para cerrarlos.
