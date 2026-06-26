@@ -49,7 +49,7 @@ Mantén `progress.md` con el estado: `[ ]` pendiente, `[~]` en curso, `[x]` hech
 | 2 | app-prd | discovery.md | prd.md | todos los requisitos con ID y criterios de aceptación |
 | 3 | app-architecture | prd.md + stack.md | architecture.md | modelo de datos + contrato API + threat model si hay datos sensibles |
 | 4 | app-mockup | prd.md | design-system.md + mockup/ | sistema de diseño definido + un mockup por flujo dentro del shell |
-| 5 | app-scaffold | todo lo anterior | código | estructura + entidades + endpoints base generados |
+| 5 | app-scaffold | todo lo anterior | código + tests | slices de prioridad alta en verde (aceptación + unit) y suite verde en el handoff |
 | 6 | app-audit | todo | audit.md | cero huecos críticos de trazabilidad |
 
 **Regla de gate**: antes de invocar la skill de una fase, verifica que el
@@ -170,3 +170,4 @@ RF activos: —      RNF activos: —      CU activos: —
 - [ ] `progress.md` con todas las fases en `[x]` y cada una con su commit
 - [ ] Proyecto bajo git con un commit por fase
 - [ ] Cada cierre de fase verificado con evidencia (no "parece que funciona"): comando ejecutado + salida vista
+- [ ] Suite completa en verde, ejecutada con evidencia, antes de cerrar el proceso (cero rojos en RF de prioridad alta)
