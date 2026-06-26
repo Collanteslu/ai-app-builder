@@ -65,8 +65,9 @@ if [[ "$MODE" == "--sync" ]]; then
   INDEX="$DEST/INDEX.md"
   if [[ -f "$INDEX" ]] && grep -q "Última sincronización:" "$INDEX"; then
     today="$(date +%Y-%m-%d)"
+    srcdisp="$SRC"; case "$SRC" in "$HOME"/*) srcdisp="~${SRC#"$HOME"}";; esac
     tmp="$(mktemp)"
-    sed -E "s/(Última sincronización:).*/\1 ${today} (fuente: ${SRC})/" "$INDEX" > "$tmp" && mv "$tmp" "$INDEX"
+    sed -E "s|(Última sincronización:).*|\1 ${today} (fuente: ${srcdisp})|" "$INDEX" > "$tmp" && mv "$tmp" "$INDEX"
     echo "Sello de fecha actualizado: $today"
   fi
   echo "Sincronizadas: $drift · sin fuente: $missing · total: $total"
