@@ -7,12 +7,7 @@
   "permission": {
     "skill": {
       "*": "allow"
-    }
-  },
-  "tools": {
-    "write": true,
-    "edit": true,
-    "bash": "ask",
-    "browser": "ask"
+    },
+    "bash": "ask"
   }
 }
