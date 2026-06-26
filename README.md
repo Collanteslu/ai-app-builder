@@ -16,6 +16,31 @@ capas:
    repo**, no se referencian de fuera. Si cambias de stack (p. ej. Supabase o
    Drizzle), añades esa skill concreta y listo.
 
+## Quick Start (un comando)
+
+Estando **dentro de la carpeta de tu nuevo proyecto** (vacía), ejecuta una línea
+y queda todo listo: descarga el constructor, instala las skills aquí, copia
+`stack.md` e inicializa git. Luego abres Claude y le dices tu idea.
+
+**macOS / Linux**
+```bash
+mkdir mi-app && cd mi-app
+curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/bootstrap.sh | bash
+```
+
+**Windows / PowerShell**
+```powershell
+mkdir mi-app; cd mi-app
+irm https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/bootstrap.ps1 | iex
+```
+
+Al terminar te imprime cómo lanzar el build-app. En resumen: edita `stack.md` y
+di en Claude Code *"Quiero crear una aplicación para [tu idea]"*. Para actualizar
+el constructor, vuelve a ejecutar el mismo comando.
+
+> Requiere `git`. El one-liner usa el repo público `Collanteslu/ai-app-builder`
+> (rama `v2`); si lo bifurcas, cambia la URL o exporta `AI_BUILDER_REPO`.
+
 ## Inicio rápido — crear una app paso a paso
 
 Este repo es el **constructor**, no la app. Lo instalas una vez y luego, en la
