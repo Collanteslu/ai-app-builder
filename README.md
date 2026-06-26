@@ -8,12 +8,116 @@ por ID. Diseñado para que no se te cuele nada.
 construyes una app desde cero sin instalar ni depender de nada externo. Son dos
 capas:
 
-1. **8 skills de orquestación** (`app-*`): conducen el proceso fase por fase.
+1. **9 skills de orquestación** (`app-*`): conducen el proceso fase por fase
+   (8 de fase + `app-memory`, transversal).
 2. **32 skills de conocimiento**, solo las que las fases realmente invocan para el
    stack por defecto (Next.js, NestJS, Prisma/PostgreSQL, auth, testing, seguridad,
    diseño/UI, a11y…). Sin duplicados ni stacks que no usas. Vienen **dentro del
    repo**, no se referencian de fuera. Si cambias de stack (p. ej. Supabase o
    Drizzle), añades esa skill concreta y listo.
+
+## Inicio rápido — crear una app paso a paso
+
+Este repo es el **constructor**, no la app. Lo instalas una vez y luego, en la
+carpeta de tu nuevo proyecto, le pides a Claude que construya la app. El
+`.builder/`, el `git init` y el código se crean **dentro de tu proyecto**, nunca
+en este repo plantilla.
+
+### Las dos carpetas (modelo mental)
+
+Hay **dos carpetas distintas**. El instalador NO crea tu app: solo copia las
+herramientas (las skills). La app la creas tú (carpeta vacía) y la **construye
+Claude** fase por fase dentro de ella.
+
+```
+ai-app-builder/            ← EL CONSTRUCTOR (caja de herramientas). Aquí: git pull.
+└── skills/ scripts/ ...       NO es tu app.
+
+mi-app/                    ← TU APP. La creas tú; aquí se construye TODO.
+├── .claude/skills/            (1) las skills, copiadas por el instalador
+├── stack.md                   (1) config a rellenar
+│   ── hasta aquí lo deja el instalador ──
+├── .builder/                  (2) Claude: discovery, prd, architecture, memory/...
+├── src/  prisma/  package.json (2) Claude: el código (Fase 5)
+└── .git/                      (2) un commit por fase
+```
+
+(1) lo monta el instalador (o `new-app`). (2) lo construye Claude cuando abres
+Claude Code en `mi-app` y le dices "Quiero crear una aplicación para …".
+
+### Opción A — un solo comando (recomendado)
+
+`new-app` lo hace todo de golpe: crea la carpeta, instala las skills dentro,
+copia `stack.md` e inicializa git. Solo te queda rellenar `stack.md` y hablar
+con Claude.
+
+```powershell
+# Windows / PowerShell
+C:\ruta\a\ai-app-builder\scripts\new-app.ps1 C:\proyectos\mi-app
+```
+
+```bash
+# macOS / Linux
+bash /ruta/a/ai-app-builder/scripts/new-app.sh ~/proyectos/mi-app
+```
+
+Luego: edita `mi-app/stack.md`, abre Claude Code en esa carpeta y di *"Quiero
+crear una aplicación para [tu idea]"*. Salta directo al paso 4 de abajo.
+
+### Opción B — paso a paso (manual)
+
+1. **Crea la carpeta de tu app y colócate dentro.**
+   ```powershell
+   mkdir C:\proyectos\mi-app; cd C:\proyectos\mi-app
+   ```
+
+2. **Instala las skills SOLO en esta app** (modo aislado, se borra fácil luego).
+   Ejecuta el instalador *desde dentro* de `mi-app`:
+   ```powershell
+   C:\ruta\a\ai-app-builder\scripts\install.ps1 -Project    # Windows
+   # /ruta/a/ai-app-builder/scripts/install.sh --project    # macOS / Linux
+   ```
+   Deja todo dentro de `mi-app`: `.claude\skills\`, `stack.md` y
+   `model-profiles.md`. No toca otros proyectos ni tu sistema. (Sin `-Project`
+   se instala global en `~/.claude/skills`; ver [Instalación](#instalación-en-claude-code).)
+
+3. **Rellena `stack.md`** — único requisito previo. Define stack, **Auth** e
+   **Infra** y contesta las restricciones de negocio. Si queda algún `(definir)`,
+   el orquestador se para en el *gate de stack*. El default ya es Next.js + Prisma
+   + PostgreSQL, así que normalmente basta con confirmar y ajustar Auth/Infra.
+
+4. **Abre Claude Code en la carpeta de tu app y arranca** con:
+   > "Quiero crear una aplicación para [tu idea]"
+   >
+   > (o la frase inequívoca: **"inicia el constructor de apps"**)
+
+5. **Deja que el orquestador conduzca el flujo.** Verás, en orden:
+
+   | Paso | Qué hace | Artefacto |
+   |------|----------|-----------|
+   | Gate de stack | valida `stack.md`, `git init` si falta, **recall** de memoria | — |
+   | Fase 0 *(opc.)* | da forma a una idea difusa hablando | `.builder/brief.md` |
+   | Fase 1 Discovery | problema, usuarios, casos de uso `CU-XX` | `.builder/discovery.md` |
+   | Fase 2 PRD | requisitos `RF-XX` con criterios de aceptación | `.builder/prd.md` |
+   | Fase 3 Arquitectura | datos, API, threat model, contratos §7/§8 | `.builder/architecture.md` |
+   | Fase 4 Mockup | sistema de diseño + pantallas navegables | `design-system.md` + `mockup/` |
+   | Fase 5 Scaffold | código + tests (TDD doble bucle) | código del proyecto |
+   | Fase 6 Auditoría | matriz de trazabilidad, caza huecos | `.builder/audit.md` |
+
+   Cada fase pasa su *gate*, hace **commit**, **captura en memoria** lo aprendido
+   (`.builder/memory/`) y emite un *handoff*. En las fases de criterio (Brainstorm,
+   PRD, Arquitectura) pide tu confirmación antes de avanzar.
+
+6. **Resultado:** app funcional bajo git (un commit por fase), cada `RF-XX`
+   trazado de discovery a test, y la memoria del proyecto en `.builder/memory/`
+   lista para la siguiente sesión.
+
+Cuando termines y quieras quitar el andamiaje (skills, `stack.md`) sin tocar tu
+código, usa `scripts\uninstall.ps1` — ver [Desinstalar](#desinstalar-borrar-el-andamiaje-al-terminar).
+
+> **En opencode** el flujo es el mismo, pero no instalas nada: abre el repo con
+> `opencode` y usa `/build-app quiero crear una aplicación para [tu idea]`. Ver
+> [Instalación en opencode](#instalación-en-opencode).
 
 ## v2 — Mejoras
 
@@ -28,7 +132,22 @@ capas:
 - **Builder CI** (`.github/workflows/builder-ci.yml`): validate-template, validate-skills
   y validate-config en cada push.
 
-## Las 8 skills de orquestación
+## v2.1 — Memoria, perfiles e instalación
+
+- **Memoria persistente** (`app-memory` → `.builder/memory/`): captura el conocimiento
+  que se aprende durante el build —decisiones no obvias, bugs y su fix, restricciones
+  descubiertas— **enlazado a la trazabilidad por ID** (`refs: [RF-01]`), y lo recuerda
+  al iniciar sesión y al entrar en cada fase. Evita repetir errores y re-discutir lo ya
+  decidido entre sesiones. El orquestador hace *recall* al arrancar y *capture* en cada
+  fase; `arquitecto`, `scaffolder` y `auditor` pueden escribir en `.builder/memory/`.
+- **Perfiles de modelo por fase** (`config/model-profiles.md`): diseñar con el modelo
+  más capaz (fases 0–3 y 6), ejecutar el grueso mecánico de la Fase 5 con uno más rápido.
+  Recomendación de coste/calidad, no un gate.
+- **Scripts de instalación** (`scripts/install.sh`, `scripts/install.ps1`): copian todas
+  las skills a Claude Code y dejan `stack.md` + `model-profiles.md` en el cwd, sin copiar
+  carpetas a mano.
+
+## Las 9 skills de orquestación
 
 | Skill | Fase | Qué hace |
 |-------|------|----------|
@@ -40,6 +159,7 @@ capas:
 | `app-mockup` | 4 | Sistema de diseño + mockups navegables → `design-system.md` + `mockup/` |
 | `app-scaffold` | 5 | Primer build funcional con TDD doble bucle derivado de todo → archivos |
 | `app-audit` | 6 | Verifica trazabilidad → `audit.md` |
+| `app-memory` | Transversal | Memoria persistente entre sesiones → `.builder/memory/` (recall + capture) |
 
 Las 32 de conocimiento son el resto de carpetas dentro de `skills/`. El manifiesto
 completo (qué hace cada una, qué fase la usa y de dónde se copió) está en
@@ -63,18 +183,69 @@ scripts/sync-skills.sh --sync     # actualiza las copias desde la fuente
 
 ## Instalación en Claude Code
 
-Copia TODAS las skills (orquestación + conocimiento) a tu carpeta de skills:
+Hay dos alcances. Elige según si quieres las skills en todas tus apps o **solo
+en una**:
 
-```bash
-# A nivel de usuario (disponibles en todos tus proyectos)
-cp -r skills/* ~/.claude/skills/
+| Modo | Destino | Cuándo |
+|------|---------|--------|
+| **Proyecto** (recomendado, aislado) | `<tu-app>\.claude\skills` | Solo esta app. Se borra eliminando una carpeta. |
+| Usuario (global) | `~/.claude/skills` | Lo quieres disponible en todos tus proyectos. |
 
-# O a nivel de proyecto (solo en este repo)
-cp -r skills/* .claude/skills/
+**Multiplataforma:** en **Windows** usa los `.ps1` (PowerShell va de serie); en
+**macOS/Linux** usa los `.sh` invocándolos con `bash` (bash va de serie). No
+mezcles: PowerShell no está instalado por defecto en Mac/Linux, y `.sh` en
+Windows requiere Git Bash o WSL. En Mac/Linux, si el `.sh` no tiene permiso de
+ejecución recién clonado, llámalo con `bash …` (como abajo) o haz
+`chmod +x scripts/*.sh`.
+
+**Aislado a una sola app** — ejecútalo *dentro* de la carpeta de tu app:
+
+```powershell
+# Windows / PowerShell
+cd C:\proyectos\mi-app
+C:\ruta\a\ai-app-builder\scripts\install.ps1 -Project
 ```
 
-Copia `config/stack.md` a la raíz del proyecto donde vayas a trabajar y
-ajústalo a tu stack antes de empezar.
+```bash
+# macOS / Linux
+cd ~/proyectos/mi-app
+bash /ruta/a/ai-app-builder/scripts/install.sh --project
+```
+
+Esto deja **todo dentro de `mi-app`**: `.claude\skills\` (las 41 skills, solo para
+esta app), `stack.md` y `model-profiles.md`. No toca tu sistema ni otros proyectos.
+
+**Global** (sin `-Project`/`--project`) copia a `~/.claude/skills`. O a mano:
+
+```bash
+cp -r skills/* ~/.claude/skills/        # global
+cp -r skills/* .claude/skills/          # proyecto (desde dentro de la app)
+```
+
+En todos los casos, ajusta `stack.md` a tu stack antes de empezar.
+
+### Desinstalar (borrar el andamiaje al terminar)
+
+Cuando la app esté hecha, quita las skills y la config del constructor **sin
+tocar tu código** (`src/`, `prisma/`, ...) ni su git:
+
+```powershell
+cd C:\proyectos\mi-app
+C:\ruta\a\ai-app-builder\scripts\uninstall.ps1        # quita .claude\skills
+C:\ruta\a\ai-app-builder\scripts\uninstall.ps1 -All   # + stack.md y model-profiles.md
+# -Builder además borra .builder\ (artefactos + memoria) — irreversible
+# -User opera sobre la instalación global (~\.claude\skills)
+```
+
+```bash
+scripts/uninstall.sh            # quita .claude/skills
+scripts/uninstall.sh --all      # + stack.md y model-profiles.md
+scripts/uninstall.sh --builder  # + .builder/ (irreversible) · --user para la global
+```
+
+O simplemente a mano: `Remove-Item -Recurse -Force .claude\skills` y borra
+`stack.md` / `model-profiles.md`. Conserva `.builder\` si quieres la doc y la
+trazabilidad; bórralo si no la necesitas.
 
 ## Instalación en opencode
 
