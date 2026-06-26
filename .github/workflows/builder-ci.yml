@@ -1,0 +1,90 @@
+name: Builder CI
+
+on:
+  push:
+    branches: [v2, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-template:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: template
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: template/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm lint
+      - run: pnpm build
+
+  validate-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check SKILL.md frontmatter
+        run: |
+          errors=0
+          for skill in skills/*/; do
+            name=$(basename "$skill")
+            file="${skill}SKILL.md"
+            if [ ! -f "$file" ]; then
+              echo "❌ $name: SKILL.md no existe"
+              errors=$((errors+1))
+              continue
+            fi
+            if ! head -1 "$file" | grep -q "^---$"; then
+              echo "❌ $name: falta frontmatter (debe empezar con ---)"
+              errors=$((errors+1))
+            fi
+            if ! grep -q "^name:" "$file"; then
+              echo "❌ $name: falta campo 'name' en frontmatter"
+              errors=$((errors+1))
+            fi
+            if ! grep -q "^description:" "$file"; then
+              echo "❌ $name: falta campo 'description' en frontmatter"
+              errors=$((errors+1))
+            fi
+            actual_name=$(grep "^name:" "$file" | sed 's/^name:[[:space:]]*//')
+            if [ "$actual_name" != "$name" ]; then
+              echo "❌ $name: name '$actual_name' no coincide con el directorio"
+              errors=$((errors+1))
+            fi
+          done
+          if [ $errors -gt 0 ]; then
+            echo "---"
+            echo "Total de errores: $errors"
+            exit 1
+          fi
+          echo "✓ Todas las skills válidas"
+
+  validate-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate opencode.json exists
+        run: |
+          if [ ! -f opencode.json ]; then
+            echo "❌ opencode.json no existe"
+            exit 1
+          fi
+          echo "✓ opencode.json presente"
+      - name: Validate .opencode structure
+        run: |
+          for dir in agents instructions command; do
+            if [ ! -d ".opencode/$dir" ]; then
+              echo "⚠ .opencode/$dir no existe (opcional)"
+            else
+              echo "✓ .opencode/$dir presente"
+            fi
+          done

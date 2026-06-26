@@ -15,6 +15,19 @@ capas:
    repo**, no se referencian de fuera. Si cambias de stack (p. ej. Supabase o
    Drizzle), añades esa skill concreta y listo.
 
+## v2 — Mejoras
+
+- **Agentes especializados por fase** (`.opencode/agents/`): `arquitecto` (solo lectura),
+  `scaffolder` (escritura total), `auditor` (solo lectura). Cada uno con tools restringidas.
+- **Instrucciones globales** (`.opencode/instructions/`): convenciones de código y
+  git workflow que opencode carga automáticamente como contexto.
+- **Permisos y configuración** (`opencode.json`): tools con `ask` para bash/browser,
+  skills permitidas por defecto.
+- **Tests del template** (`template/__tests__/`): validan que el template tenga todos
+  los archivos esenciales, versiones pinned sin `^`, frontmatter de skills correcto.
+- **Builder CI** (`.github/workflows/builder-ci.yml`): validate-template, validate-skills
+  y validate-config en cada push.
+
 ## Las 8 skills de orquestación
 
 | Skill | Fase | Qué hace |
@@ -65,24 +78,24 @@ ajústalo a tu stack antes de empezar.
 
 ## Instalación en opencode
 
-opencode carga automáticamente las skills desde `~/.claude/skills/`, por lo que
-la instalación para Claude Code funciona también para opencode. Además puedes
-instalarlas a nivel de proyecto:
+opencode descubre automáticamente las skills desde `skills/`, los agentes desde
+`.opencode/agents/`, las instrucciones desde `.opencode/instructions/` y los
+comandos desde `.opencode/command/`. Abre el repo y todo funciona:
 
 ```bash
-# A nivel de usuario (disponibles en todos tus proyectos)
-cp -r skills/* ~/.claude/skills/
-
-# O a nivel de proyecto
-cp -r skills/* .opencode/skills/
+cd ruta/al/repo
+opencode
 ```
 
-El comando de entrada `/build-app` ya viene incluido en `.opencode/command/`.
+Luego usa el comando incorporado:
 
-Si clonas el repo, `opencode.json` de la raíz ya apunta a `skills/` y `commands/`:
-abres el repo en opencode y todo funciona sin copiar nada.
+> `/build-app quiero crear una aplicación para [tu idea]`
 
-Para usar las skills desde otro proyecto sin copiarlas, añade a tu `opencode.json`:
+O simplemente dile al agente:
+
+> "Quiero crear una aplicación para [tu idea]"
+
+Para usar las skills desde **otro proyecto** sin copiarlas, añade a tu `opencode.json`:
 
 ```json
 {
@@ -120,9 +133,9 @@ no tenga campos `(definir)` sin resolver), inicializa git si hace falta, y
 arranca. Si la idea aún es difusa ("tengo una idea pero no la tengo clara"),
 empieza por la **Fase 0 (Brainstorm)** para darle forma hablando antes de
 formalizar; si ya la tienes clara, salta directo a Discovery. A partir de ahí te
-va llevando: no tienes que invocar cada
-skill a mano. Al cerrar cada fase hace commit del artefacto y emite un bloque de
-handoff con lo generado y la fase siguiente.
+va llevando fase por fase con **agentes especializados**: el `arquitecto` diseña
+(lectura), el `scaffolder` construye (escritura), el `auditor` verifica (lectura).
+Cada fase termina con commit del artefacto y un bloque de handoff.
 
 ## Por qué funciona (mecanismos y refuerzos)
 
