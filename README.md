@@ -78,7 +78,11 @@ cp -r skills/* .opencode/skills/
 ```
 
 El comando de entrada `/build-app` ya viene incluido en `.opencode/command/`.
-Para activar las skills desde el repo sin copiarlas, añade a tu `opencode.json`:
+
+Si clonas el repo, `opencode.json` de la raíz ya apunta a `skills/` y `commands/`:
+abres el repo en opencode y todo funciona sin copiar nada.
+
+Para usar las skills desde otro proyecto sin copiarlas, añade a tu `opencode.json`:
 
 ```json
 {

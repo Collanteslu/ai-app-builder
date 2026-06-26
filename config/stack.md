@@ -29,6 +29,8 @@
 > Las versiones exactas están en `template/` (`package.json`, `.nvmrc`, `.npmrc`,
 > `prisma.config.ts`, etc.). Cópialo todo antes de empezar — así evitas el
 > paraguas `^` y usas pnpm.
+>
+> Para la base de datos local: `docker compose up -d` (PostgreSQL 17 en puerto 5432).
 
 ## Convenciones
 

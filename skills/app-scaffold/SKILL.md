@@ -31,7 +31,8 @@ Esto te da: `.nvmrc`, `.npmrc` (pnpm + `save-exact=true`), `package.json`
 (PostgreSQL 17), `eslint.config.mjs`, `.prettierrc`, `vitest.config.ts`,
 `playwright.config.ts`, `.github/workflows/ci.yml`, `src/lib/utils.ts` (cn),
 `src/lib/env.ts` (validación con Zod), `src/lib/prisma.ts` (singleton),
-`src/app/layout.tsx`, `page.tsx`, `not-found.tsx`, `error.tsx`.
+`src/app/layout.tsx`, `page.tsx`, `not-found.tsx`, `error.tsx`, `loading.tsx`,
+`api/health/route.ts`, y `e2e/example.spec.ts`.
 
 ### 1. Lee los docs del proyecto
 
