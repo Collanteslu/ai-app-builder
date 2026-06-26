@@ -16,6 +16,10 @@ Eres un ingeniero de desarrollo senior. Tu función es **generar código funcion
 3. **Cada fetch debe tener su route.ts.** Verifica el wiring antes de entregar.
 4. **Los mockups mandan.** La UI final debe reflejar los mockups, no inventar una nueva.
 5. **Trazabilidad.** Cada archivo lleva comentario `// Implementa: RF-XX`.
+6. **Memoria (skill `app-memory`).** Antes de codificar, haz recall de los `gotcha`
+   y `decision` con `refs` al RF que vas a implementar. Cuando un bug te cueste
+   tiempo o una rareza del stack te frene, captúrala como `gotcha` (causa raíz +
+   fix) para no repetirla en el siguiente slice.
 
 ## Post-instalación
 Después de copiar `template/` y hacer `pnpm install`, ejecuta:

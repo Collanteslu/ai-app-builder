@@ -25,7 +25,10 @@ proyecto/
     ├── architecture.md   ← Fase 3 (incluye modelo de datos y contrato API)
     ├── mockup/           ← Fase 4
     ├── audit.md          ← Fase 6 (informe de coherencia)
-    └── progress.md       ← estado de fases (lo mantienes tú)
+    ├── progress.md       ← estado de fases (lo mantienes tú)
+    └── memory/           ← memoria persistente entre sesiones (skill app-memory)
+        ├── MEMORY.md     ← índice; lo lees al iniciar sesión
+        └── <slug>.md     ← una memoria = un hecho (decisión, gotcha, restricción…)
 ```
 
 ## Control de versiones (obligatorio)
@@ -41,6 +44,13 @@ trazabilidad es solo una foto del momento.
 
 Al empezar, comprueba qué existe ya en `.builder/` y retoma donde se quedó.
 Mantén `progress.md` con el estado: `[ ]` pendiente, `[~]` en curso, `[x]` hecho.
+
+**Recall de memoria (primer paso de cada sesión).** Antes de retomar nada, si
+existe `.builder/memory/MEMORY.md`, léelo (skill `app-memory`). Repasa siempre
+las memorias de tipo `constraint` y `context`, y abre las relevantes a la fase
+en la que vas a entrar (por `phase` y por los `refs` que vas a tocar). Esto evita
+re-litigar decisiones ya tomadas y re-introducir bugs ya documentados. Si no hay
+memoria todavía, continúa: se irá creando con el primer `capture`.
 
 | Fase | Skill | Entra | Sale | Gate para avanzar |
 |------|-------|-------|------|-------------------|
@@ -80,10 +90,15 @@ resolverlo antes de la Fase 1. Un `stack.md` con `(definir)` revienta la Fase 3.
 3. Anuncia siempre en qué fase estás y qué vas a producir.
 4. Invoca la skill de la fase (cada fase tiene su propia skill: app-brainstorm,
    app-discovery, app-prd, etc.). Sigue sus instrucciones.
-5. Al terminar una fase, comprueba su "Definition of Done", actualiza
-   `progress.md`, **haz commit del artefacto**, y emite el bloque de handoff
-   (abajo) antes de proponer la siguiente.
-6. No avances sin confirmación del usuario en las fases de criterio (Brainstorm,
+5. **Captura en memoria lo que aprendas** (skill `app-memory`). Durante la fase,
+   cuando tomes una decisión no obvia, resuelvas un bug que pueda volver, o
+   descubras una restricción o rareza del stack, escríbelo en `.builder/memory/`
+   con sus `refs` a los IDs que toca. No lo dejes solo en la conversación: se
+   pierde al cerrar la sesión.
+6. Al terminar una fase, comprueba su "Definition of Done", actualiza
+   `progress.md`, **haz commit del artefacto** (incluye las memorias nuevas), y
+   emite el bloque de handoff (abajo) antes de proponer la siguiente.
+7. No avances sin confirmación del usuario en las fases de criterio (Brainstorm,
    PRD y arquitectura). En las mecánicas (mockup, scaffold) puedes encadenar más fluido.
 
 ## Handoff entre fases (formato fijo)
@@ -97,6 +112,7 @@ Artefacto: .builder/<fichero> (commit <hash corto>)
 DoD: [x] todas las casillas marcadas  (o lista las que faltan)
 IDs nuevos/afectados: RF-01..RF-08, RNF-01
 Cambios retroactivos: ninguno  (o "actualizado prd.md: añadido RF-09, ver abajo")
+Memoria: ninguna  (o "capturada decision borrado-logico-armas (RNF-01)")
 Siguiente fase: <nombre> — produce <artefacto>
 ```
 
@@ -111,6 +127,9 @@ Este proceso se apoya en skills incluidas en el propio repo (no en nada externo)
   Auditoría (Fase 6), conduce una revisión estructurada del código.
 - **`testing`** y **`debugging-strategies`**: las usa la Fase 5 (ver su skill);
   tú solo te aseguras de que se aplican.
+- **`app-memory`**: memoria persistente entre sesiones. Léela al iniciar (recall)
+  y captura en ella las decisiones, gotchas y restricciones que aprendas. Es lo
+  que evita repetir errores y re-discutir lo ya decidido en sesiones anteriores.
 
 ## Cambios retroactivos (el flujo no es de un solo sentido)
 
@@ -171,3 +190,4 @@ RF activos: —      RNF activos: —      CU activos: —
 - [ ] Proyecto bajo git con un commit por fase
 - [ ] Cada cierre de fase verificado con evidencia (no "parece que funciona"): comando ejecutado + salida vista
 - [ ] Suite completa en verde, ejecutada con evidencia, antes de cerrar el proceso (cero rojos en RF de prioridad alta)
+- [ ] Las decisiones no obvias, gotchas y restricciones aprendidas están en `.builder/memory/` con sus `refs` (no solo en la conversación)

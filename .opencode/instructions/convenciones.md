@@ -3,7 +3,7 @@
 ## Commits
 - Usa Conventional Commits en español con emoji
 - Formato: `<tipo>: <descripción corta>`
-- Tipos: `✨ feat`, `🐛 fix`, `♻️ refactor`, `📝 docs`, `🧪 test`, `🔧 chore`
+- Tipos: `✨ feat`, `🐛 fix`, `♻️ refactor`, `📝 docs`, `🧪 test`, `🔧 chore`, `🧠 memoria`
 - Ejemplo: `✨ feat: añadir autenticación con NextAuth`
 
 ## Idioma

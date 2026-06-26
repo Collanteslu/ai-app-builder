@@ -1,9 +1,10 @@
 # Índice de skills
 
-Dos capas (ver README): **8 de orquestación** (`app-*`, el proceso) y **32 de
-conocimiento** (referencia que las fases invocan). Este índice es el manifiesto
-de las 32: para qué sirven, qué fase las usa y de dónde se copiaron (para poder
-re-sincronizarlas, ver `scripts/sync-skills.sh`).
+Dos capas (ver README): **9 de orquestación** (`app-*`, el proceso) y **32 de
+conocimiento** (referencia que las fases invocan). Este índice es el **registro**
+que el orquestador lee al arrancar para saber qué skills hay disponibles y en qué
+fase encaja cada una: para qué sirven, qué fase las usa y de dónde se copiaron
+(para poder re-sincronizarlas, ver `scripts/sync-skills.sh`).
 
 > Última sincronización: 2026-06-26 (fuente: ~/.agents/skills)
 > La columna "Fase(s)" refleja dónde está **cableada** la skill (la nombra esa
@@ -21,6 +22,7 @@ re-sincronizarlas, ver `scripts/sync-skills.sh`).
 | `app-mockup` | 4 |
 | `app-scaffold` | 5 |
 | `app-audit` | 6 |
+| `app-memory` | Transversal (recall + capture en todas las fases) |
 
 ## Skills de conocimiento (referencia invocable)
 
