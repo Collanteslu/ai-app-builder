@@ -41,6 +41,20 @@ referencia el RF que implementa. Esto evita endpoints "huérfanos" sin requisito
 Si el PRD tiene RNF de RGPD/seguridad: lista activos a proteger, amenazas,
 controles (autenticación, autorización, cifrado, auditoría) y qué RNF cubre cada uno.
 
+### 5. Diseño de componentes/módulos
+Descompón cada flujo en componentes con responsabilidad única. Una tabla:
+módulo · responsabilidad · qué RF cubre · dependencias. Es el mapa de piezas
+que el scaffold construirá.
+
+### 6. Contratos de interfaz interna
+Por cada componente con comportamiento real (lógica, validación, cambios de
+estado) o que cruza límites de módulo, define su interfaz pública: firma
+entrada→salida, precondiciones, postcondiciones y errores esperados. Un CRUD
+simple lleva contrato mínimo (no sobrediseñes). **Estos contratos son la fuente
+de los tests unitarios** de la Fase 5.
+Legacy (CI3): "componente" = controlador/modelo/librería; "contrato" = interfaz
+pública PHP de esa clase.
+
 ## Salida: architecture.md
 
 ```markdown
@@ -70,7 +84,20 @@ Relaciones: [...]
 |--------|---------|---------|-----------|
 
 ## 6. Trazabilidad
-Tabla RF-XX → entidad(es) → endpoint(s). Marca cualquier RF sin cubrir.
+Tabla RF-XX → entidad(es) → endpoint(s) → componente(s) → contrato §8.
+Marca cualquier RF sin cubrir.
+
+## 7. Componentes
+| Componente | Responsabilidad | Cubre | Depende de |
+|-----------|-----------------|-------|------------|
+| MovimientoService | Registrar salida/devolución y estado del arma | RF-01, RF-02 | ArmaRepo, SocioRepo |
+
+## 8. Contratos
+### Contrato — MovimientoService
+- `registrarSalida(socioId, armaId): Movimiento`
+  - Pre: socio con licencia vigente; arma DISPONIBLE.
+  - Post: Movimiento estado="fuera"; arma → ENTREGADA.
+  - Errores: LicenciaCaducada, ArmaNoDisponible.
 ```
 
 ## Skills incluidas (úsalas)
@@ -92,5 +119,7 @@ Aplícalas en la pieza que les toca (todas vienen incluidas en el repo):
 - [ ] Contrato de API: ningún endpoint sin RF, ningún RF sin endpoint (salvo justificado)
 - [ ] Threat model presente si había datos sensibles en el PRD
 - [ ] Desviaciones del stack documentadas como ADR
+- [ ] §7: cada RF de prioridad alta tiene componente(s) asignado(s)
+- [ ] §8: cada componente con comportamiento real o que cruza módulo tiene contrato (firma, pre/post, errores); los CRUD simples, contrato mínimo
 
 Cuando esté completo, guarda `architecture.md` y devuelve el control al orquestador.
