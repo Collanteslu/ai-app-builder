@@ -418,6 +418,7 @@ No cierres la fase hasta que TODO esto sea cierto:
 - [ ] **ZERO INLINE DATA**: ninguna página contiene arrays de datos mock.
 - [ ] **SEED IDS FIJOS**: todos los IDs que el frontend referencia están en el seed con el mismo valor.
 - [ ] **CRUD POR ENTIDAD**: cada entidad tiene sus 5 archivos (route list, route id, página list, página detail, tests). Verificado con glob.
+- [ ] **CREATE/EDIT SYMMETRY**: cada `*/new/page.tsx` tiene su `*/[id]/edit/page.tsx`. Cada `POST /api/[entidad]` tiene su `PUT /api/[entidad]/[id]`. Verificado con bucle sobre todas las entidades.
 - [ ] **AUTH REAL**: login/registro usan NextAuth con session real, no simulado.
 - [ ] **TEST DB AISLADA**: los tests usan `DATABASE_URL_TEST`, no `DATABASE_URL`.
 - [ ] **API TESTS**: cada endpoint tiene test de API que cubre: happy path (200/201), validación (400), no encontrado (404), conflicto (409). Mínimo 5 tests por endpoint.

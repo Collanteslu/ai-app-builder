@@ -59,6 +59,12 @@ Toda entidad que aparece en el modelo de datos debe tener, como mínimo:
 - `PUT o PATCH /api/[entidad]/[id]` — actualizar (si la entidad es modificable)
 - `DELETE /api/[entidad]/[id]` — borrar (si aplica)
 
+**CREATE/EDIT SYMMETRY (regla de simetría):**
+Si existe `POST /api/[entidad]` (crear), debe existir `PUT /api/[entidad]/[id]` (editar).
+Si existe `*/[entidad]/new/page.tsx` (formulario de creación), debe existir
+`*/[entidad]/[id]/edit/page.tsx` (formulario de edición).
+Esta simetría se verifica en la auditoría con un bucle sobre todas las entidades.
+
 Sin estos endpoints mínimos, el scaffold no puede conectar las páginas a los
 datos, y el sistema entero depende de arrays mock inline. La tabla de endpoints
 debe incluir el verbo, la ruta completa y el código de estado de éxito esperado

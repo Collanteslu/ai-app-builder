@@ -52,7 +52,17 @@ Recorre las cadenas en ambos sentidos y reporta cualquier rotura:
      los tests comparten DB de desarrollo como **hueco crítico**.
 12. **COBERTURA MÍNIMA**: cuenta los tests por entidad (patrón `src/__tests__/api/*.test.ts`).
      Si alguna entidad tiene menos de 5 tests, reporta **hueco menor**.
-13. **Huérfanos inversos**: ¿hay endpoints, entidades o archivos que NO se mapean
+13. **CREATE/EDIT SYMMETRY**: busca todas las páginas `*/new/page.tsx` (creación).
+     Para cada una, verifica que existe su correspondiente `*/[id]/edit/page.tsx`
+     (edición). También verifica que si existe `POST /api/[entidad]/route.ts`
+     existe su correspondiente `PUT /api/[entidad]/[id]/route.ts`.
+     Reporta cualquier entidad que se pueda crear pero no editar como **hueco crítico**.
+     Este check se ejecuta en un bucle: por cada `new/` encontrado, busca su edit.
+14. **CRUD COMPLETO**: para cada entidad con página de listado (ej: `*/products/page.tsx`),
+     verifica que existe: detalle (`*/products/[id]/page.tsx`), creación (`*/products/new/page.tsx`),
+     y edición (`*/products/[id]/edit/page.tsx`). Reporta cualquier falta como **hueco crítico**.
+     Este check también es un bucle: itera sobre todas las entidades y verifica las 4 páginas.
+15. **Huérfanos inversos**: ¿hay endpoints, entidades o archivos que NO se mapean
      a ningún RF? (señal de scope creep o de un requisito sin documentar)
 
 ## Comprobaciones de calidad
@@ -122,6 +132,37 @@ if [ ! -f "src/app/api/auth/\[...nextauth\]/route.ts" ]; then
 fi
 echo "✅ NextAuth configurado"
 
+echo "=== 7. CREATE/EDIT SYMMETRY (bucle) ==="
+for newpage in $(find src/app -name "new" -path "*/page.tsx" 2>/dev/null || true); do
+  dir=$(dirname "$(dirname "$newpage")")
+  entity=$(basename "$dir")
+  editpage="$dir/[id]/edit/page.tsx"
+  if [ ! -f "$editpage" ]; then
+    echo "❌ $entity: tiene new/ pero no [id]/edit/"
+    exit 1
+  fi
+  echo "✅ $entity: new → edit OK"
+done
+
+echo "=== 8. CRUD COMPLETO (bucle) ==="
+for listpage in $(find src/app/seller src/app/\(shop\) -name "page.tsx" ! -path "*/new/*" ! -path "*/edit/*" ! -path "*\[id\]/*" ! -path "*/api/*" 2>/dev/null || true); do
+  dir=$(dirname "$listpage")
+  entity=$(basename "$dir")
+  # Saltar layouts, login, register, etc que no son entidades CRUD
+  case "$entity" in
+    layout|login|register|profile|search|chats|orders|dashboard|api) continue;;
+  esac
+  # Solo entidades con new/ (creables)
+  if [ -d "$dir/new" ]; then
+    for page in "page.tsx" "[id]/page.tsx" "new/page.tsx" "[id]/edit/page.tsx"; do
+      if [ ! -f "$dir/$page" ]; then
+        echo "⚠️  $entity: falta $page"
+      fi
+    done
+    echo "✅ $entity: CRUD completo"
+  fi
+done
+
 echo ""
 echo "🎉 Auditoría completa — 0 huecos críticos"
 ```
@@ -179,6 +220,7 @@ Estado: ✅ sin huecos críticos / ⚠️ con huecos / ❌ bloqueante
 - [ ] Los hallazgos se basan en evidencia comprobada, no en suposición
 - [ ] La suite completa se ha ejecutado contra la **test DB** y está en verde (evidencia: comando + salida); cero rojos en prioridad alta
 - [ ] Audit script incorporado al CI (`.github/workflows/ci.yml`)
+- [ ] **CREATE/EDIT SYMMETRY**: bucle ejecutado y verificado — toda entidad creable es editable
 - [ ] Seed IDs verificados: todos los IDs del frontend existen en el seed
 - [ ] NextAuth real verificado: no hay login simulado
 - [ ] Test DB aislada: docker-compose.test.yml existe y los tests la usan
