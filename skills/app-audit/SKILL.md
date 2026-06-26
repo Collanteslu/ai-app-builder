@@ -96,8 +96,8 @@ cerrar":
 |-----------|-------|-------------|
 | **CRÍTICO** (exit 1) | `INLINE-DATA` | arrays de datos mock dentro de una página |
 | **CRÍTICO** (exit 1) | `WIRING` | `fetch('/api/X')` sin su carpeta `src/app/api/X/` |
-| **AVISO** | `ORPHAN-SERVICE` | servicio que no se importa en ninguna página ni endpoint (capa de lógica muerta) |
-| **AVISO** | `NO-ZOD` | endpoint que lee el body sin validarlo con Zod |
+| **CRÍTICO** (exit 1) | `ORPHAN-SERVICE` | servicio que no se usa en ningún endpoint ni componente (capa de lógica muerta) |
+| **CRÍTICO** (exit 1) | `NO-ZOD` | endpoint que lee el body sin validarlo con Zod |
 | **AVISO** | `E2E-PLACEHOLDER` | sin e2e real del flujo principal |
 | **AVISO** | `TEST-DB` | sin BD de test aislada (`docker-compose.test.yml`) |
 

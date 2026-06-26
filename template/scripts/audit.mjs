@@ -8,10 +8,10 @@
 // Uso:  node scripts/audit.mjs        (o:  pnpm audit:builder)
 //
 // Severidad:
-//   CRÍTICO  → bloquea el cierre (exit 1). Datos inline, fetch sin endpoint,
-//              servicio huérfano (sin superficie en la app).
-//   AVISO    → no bloquea (exit 0), pero se reporta. Endpoint sin Zod, e2e
-//              placeholder, test DB no aislada.
+//   CRÍTICO  → bloquea el cierre (exit 1): datos inline, fetch sin endpoint,
+//              servicio huérfano (capa de lógica muerta), endpoint sin Zod.
+//   AVISO    → no bloquea (exit 0), pero se reporta: e2e placeholder, test DB
+//              no aislada.
 //
 // Opt-out puntual: añade `// audit-ignore` en la misma línea o la anterior.
 
@@ -95,22 +95,27 @@ for (const f of [...pages, ...files.filter((x) => x.endsWith(".ts") && !x.endsWi
   }
 }
 
-// ── 3. CRÍTICO — servicio huérfano (no se importa en ningún sitio de la app) ──
-const appFiles = files.filter((f) => /\/app\//.test(posix(f)));
+// ── 3. CRÍTICO — servicio huérfano (no se importa en NINGÚN sitio de src) ──
+// Escanea todo src/ (no solo /app/) y casa imports por nombre de fichero, tanto
+// por alias (@/lib/services/x) como relativos (./x) — así no marca como muerto un
+// servicio usado desde lib/ (p. ej. auth-service en lib/auth.ts, o un validator
+// usado por otro servicio).
+const nonTestSrc = files.filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\./.test(posix(f)));
 for (const svc of services) {
   const base = svc.split(sep).pop().replace(/\.ts$/, "");
-  const importedSomewhere = appFiles.some((f) => f !== svc && new RegExp(`/services/${base}["'\`]`).test(read(f)));
-  if (!importedSomewhere) {
-    warn("ORPHAN-SERVICE", posix(svc), `el servicio no se importa en ninguna página ni endpoint (capa de lógica sin superficie). Cablea su endpoint y su UI.`);
+  const importRe = new RegExp(`(from\\s+|import\\(\\s*)["'\`][^"'\`]*[/]${base}["'\`]`);
+  const used = nonTestSrc.some((f) => f !== svc && importRe.test(read(f)));
+  if (!used) {
+    crit("ORPHAN-SERVICE", posix(svc), `el servicio no se usa en ningún endpoint ni componente (capa de lógica muerta). Cablea su uso en el route/página o elimínalo.`);
   }
 }
 
-// ── 4. AVISO — endpoint que lee body sin validar con Zod ──────────────────────
+// ── 4. CRÍTICO — endpoint que lee body sin validar con Zod ────────────────────
 for (const r of apiRoutes) {
   const src = read(r);
   if (/\.json\(\)/.test(src) && /(req|request)\s*\.\s*json|await\s+\w*\.?json\(\)/.test(src)) {
     if (!/from\s+["']zod["']/.test(src)) {
-      warn("NO-ZOD", posix(r), "lee el body de la petición sin validarlo con Zod (validación manual frágil).");
+      crit("NO-ZOD", posix(r), "lee el body de la petición sin validarlo con Zod (validación manual frágil).");
     }
   }
 }
