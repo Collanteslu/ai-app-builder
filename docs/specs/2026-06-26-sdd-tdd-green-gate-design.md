@@ -45,6 +45,25 @@ A las secciones actuales (1 Stack, 2 ADRs, 3 Modelo de datos, 4 Contrato de API,
 - **Trazabilidad ampliada**: la tabla §6 pasa a `RF → entidad → endpoint →
   componente(s) → contrato §8`.
 
+**Formato canónico (va dentro de `app-architecture` como ejemplo a seguir).**
+Fija la forma para que §8 sea parseable y los tests salgan de él sin inventar:
+
+```markdown
+### §7 Componentes
+| Componente | Responsabilidad | Cubre | Depende de |
+|-----------|-----------------|-------|------------|
+| MovimientoService | Registrar salida/devolución y estado del arma | RF-01, RF-02 | ArmaRepo, SocioRepo |
+
+### §8 Contrato — MovimientoService
+- `registrarSalida(socioId, armaId): Movimiento`
+  - Pre: socio con licencia vigente; arma DISPONIBLE.
+  - Post: Movimiento estado="fuera"; arma → ENTREGADA.
+  - Errores: LicenciaCaducada, ArmaNoDisponible.
+```
+
+De cada contrato salen los tests unitarios casi 1:1 (un test por post-condición
+y uno por error).
+
 **DoD añadido a la Fase 3:**
 - [ ] Cada RF de prioridad alta tiene componente(s) asignado(s) en §7.
 - [ ] Cada componente con comportamiento real o que cruza módulo tiene contrato
@@ -96,6 +115,11 @@ defecto; PHPUnit en CI3 legacy).
 > **"Suite" =** tests unitarios + tests de aceptación (+ el e2e del flujo
 > principal), **todos ejecutados**. El gate verde no es solo unitarios.
 
+- **Alcance del gate:** "todo en verde" aplica a los RF de **prioridad alta**.
+  Los tests de RF de prioridad **media/baja** pueden quedar `.skip`/pendientes
+  **sin bloquear** el cierre (coherente con que el scaffold ya permite TODOs ahí).
+  "Verde" no significa literalmente cubrir todo, sino que nada de prioridad alta
+  está rojo ni saltado.
 - **Handoff del Scaffold:** no entrega hasta que la suite completa pasa, con
   evidencia. Cero rojos y cero `skip` en RF de prioridad alta.
 - **Auditoría (Fase 6):** ejecución final de toda la suite como **gate de cierre
