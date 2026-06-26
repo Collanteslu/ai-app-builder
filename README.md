@@ -90,7 +90,7 @@ handoff con lo generado y la fase siguiente.
    mockup, código y tests lo referencian. La auditoría final comprueba que toda
    la cadena enlaza. Lo que no se mapea, se ha olvidado.
 
-Y dos refuerzos que lo sostienen:
+Y cuatro refuerzos que lo sostienen:
 
 4. **Versionado por fase**: el proyecto va bajo git y cada gate cierra con un
    commit del artefacto. La trazabilidad por ID deja de ser una foto y pasa a
@@ -98,6 +98,12 @@ Y dos refuerzos que lo sostienen:
 5. **Cambios retroactivos declarados**: cuando una fase descubre un hueco en un
    artefacto anterior, lo actualiza y lo declara en el handoff, en vez de
    parchearlo en silencio. El PRD nunca queda por detrás de la realidad.
+6. **SDD + TDD doble bucle**: el diseño (Fase 3) llega hasta contratos de
+   componente (§7/§8). De ahí nacen los tests, escritos ANTES del código: de
+   aceptación por cada RF (bucle externo) y unitarios por contrato (bucle interno).
+7. **Gate "todo en verde" + verificación con evidencia**: ninguna fase se cierra
+   declarando "funciona" de memoria; se ejecuta la suite y se observa la salida.
+   El proceso no termina hasta que toda la suite pasa (cero rojos en prioridad alta).
 
 > El sistema es **autosuficiente**: las skills de orquestación tiran de las skills
 > de conocimiento que vienen **incluidas en el repo**. Ejemplos: diseño
@@ -113,6 +119,13 @@ Y dos refuerzos que lo sostienen:
 
 Idea de partida: *"una app para gestionar el alquiler de armas en un club de tiro,
 que registre quién se lleva qué arma y cuándo la devuelve"* (caso real tipo Ridon).
+
+### Fase 0 — Brainstorm *(opcional)*
+
+Si la idea llegara difusa ("quiero algo para el club, no sé bien qué"),
+`app-brainstorm` la daría forma hablando: reta supuestos, busca el problema real,
+recorta (YAGNI) y produce `brief.md` con la idea en una frase. Como aquí la idea
+ya viene clara, se puede saltar directo a Discovery.
 
 ### Fase 1 — Discovery
 
@@ -185,18 +198,29 @@ Acceso solo a usuarios autenticados con rol. Auditoría de quién consulta.
 **Gate**: ✅ cada CU tiene RF, todos con ID y criterios, RNF de RGPD presente.
 Avanza.
 
-### Fase 3 — Arquitectura
+### Fase 3 — Arquitectura (SDD)
 
-`app-architecture` lee PRD + stack.md. Genera `architecture.md` con modelo de
-datos, contrato API y threat model. La parte clave es la tabla de trazabilidad:
+`app-architecture` lee PRD + stack.md. Genera `architecture.md` como **SDD**:
+modelo de datos, contrato API, threat model y —la clave para el TDD— el diseño
+de componentes (§7) con sus contratos (§8). La trazabilidad llega hasta el
+contrato:
 
 ```markdown
 ## 6. Trazabilidad
-| RF | Entidad(es) | Endpoint(s) |
-|----|-------------|-------------|
-| RF-01 | Movimiento, Arma, Socio | POST /api/movimientos/salida |
-| RF-03 | Movimiento, Arma | GET /api/armas/fuera |
+| RF | Entidad(es) | Endpoint(s) | Componente | Contrato §8 |
+|----|-------------|-------------|------------|-------------|
+| RF-01 | Movimiento, Arma, Socio | POST /api/movimientos/salida | MovimientoService | registrarSalida |
+| RF-03 | Movimiento, Arma | GET /api/armas/fuera | ArmaQuery | listarFuera |
+
+## 8. Contrato — MovimientoService
+- registrarSalida(socioId, armaId): Movimiento
+  - Pre: socio con licencia vigente; arma DISPONIBLE.
+  - Post: Movimiento estado="fuera"; arma → ENTREGADA.
+  - Errores: LicenciaCaducada, ArmaNoDisponible.
 ```
+
+De ese contrato salen los tests unitarios de la Fase 5 (uno por post-condición
+y uno por error).
 
 Y como hay datos sensibles, el threat model es obligatorio:
 
@@ -213,27 +237,40 @@ model presente. Avanza.
 
 ### Fase 4 — Mockup
 
-`app-mockup` genera un HTML por flujo: `flujo-01-salida.html`,
-`flujo-03-armas-fuera.html`, enlazados desde `index.html`. Cada pantalla anota
-el RF que cubre. El encargado puede clicar y validar el flujo antes de programar.
+`app-mockup` primero fija el `design-system.md` (paleta, tipografía con carácter,
+iconos reales — nada de genérico de IA) y luego las pantallas DENTRO de un shell
+de navegación común por rol (no HTMLs isla), todo en `mockup/`. Cada pantalla
+anota el RF que cubre. El encargado clica y valida el flujo antes de programar.
 
-### Fase 5 — Scaffold
+### Fase 5 — Scaffold (TDD doble bucle)
 
-`app-scaffold` lee todo y genera el esqueleto (aquí con el stack por defecto
-Next.js + NestJS + Prisma). Cada archivo lleva su comentario de trazabilidad:
+`app-scaffold` construye por slices con TDD doble bucle (stack por defecto
+Next.js + NestJS + Prisma). Para RF-01, **primero el test de aceptación** (rojo)
+y los unitarios del contrato §8; luego la implementación que los pone en verde
+(sin TODOs en prioridad alta):
+
+```typescript
+// test de aceptación — RF-01 (registrar salida de arma)
+it('RF-01: bloquea la salida si el socio no tiene licencia vigente', async () => {
+  const res = await api.post('/api/movimientos/salida', { socioId, armaId });
+  expect(res.status).toBe(409);            // LicenciaCaducada
+});
+```
 
 ```typescript
 // Implementa: RF-01 (registrar salida de arma)
-// Ver: .builder/architecture.md §4
-@Post('salida')
-async registrarSalida(@Body() dto: SalidaDto) {
-  // TODO: validar licencia del socio (criterio de aceptación 2)
-  // TODO: crear movimiento con estado "fuera"
+// UI base: mockup/flujo-01-salida.html · Ver: .builder/architecture.md §8
+async registrarSalida(socioId, armaId) {
+  if (!socio.licenciaVigente) throw new LicenciaCaducada();   // post/error del contrato §8
+  if (arma.estado !== 'DISPONIBLE') throw new ArmaNoDisponible();
+  arma.estado = 'ENTREGADA';
+  return this.movimientos.crear({ socioId, armaId, estado: 'fuera' });
 }
 ```
 
-Más migraciones de Prisma para las entidades y tests base referenciando los
-criterios de aceptación.
+Más migraciones de Prisma para las entidades. El slice se cierra cuando su test
+de aceptación (y sus unitarios) están en **verde**, y se hace commit antes del
+siguiente.
 
 ### Fase 6 — Auditoría
 
@@ -241,16 +278,18 @@ criterios de aceptación.
 
 ```markdown
 ## Matriz de trazabilidad
-| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test | Estado |
-|----|-----------|-----|--------------|--------|--------|------|--------|
-| RF-01 | CU-01 | ✅ | ✅ | ✅ | ✅ | ✅ | OK |
-| RF-03 | CU-03 | ✅ | ✅ | ✅ | ✅ | ❌ | hueco menor |
+| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test acept. | Contrato/comp. | Estado |
+|----|-----------|-----|--------------|--------|--------|-------------|----------------|--------|
+| RF-01 | CU-01 | ✅ | ✅ | ✅ | ✅ | verde | sí | OK |
+| RF-03 | CU-03 | ✅ | ✅ | ✅ | ✅ | rojo | no | hueco menor |
 
 ## Huecos detectados
 ### Menores
-- RF-03 no tiene test. Recomendación: añadir test del listado de armas fuera.
+- RF-03 sin test de aceptación en verde. Recomendación: añadir el test del
+  listado de armas fuera y dejarlo verde.
 ```
 
-Aquí ves el valor: sin la auditoría, el test olvidado de RF-03 habría pasado
-desapercibido. El orquestador te diría que vuelvas brevemente a la Fase 5 para
-cerrarlo, y el proyecto queda completo y trazado de punta a punta.
+Aquí ves el valor: la auditoría ejecuta toda la suite, así que el test rojo de
+RF-03 no pasa desapercibido. Como el **gate de cierre exige todo en verde** en
+prioridad alta, el orquestador te devuelve a la Fase 5 a cerrarlo antes de dar
+el proyecto por terminado.
