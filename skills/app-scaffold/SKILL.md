@@ -151,6 +151,34 @@ Un servicio que no se importa en ninguna página ni route es código muerto: el
 auditor lo marca (`ORPHAN-SERVICE`). No dupliques la lógica del servicio dentro
 del `route.ts`.
 
+### Código que pasa tsc + lint de Next 16 (a la primera)
+
+El template usa Next 16 con ESLint estricto (React Compiler) y TypeScript 6. Para
+que el build generado NO traiga errores, respeta estas reglas al escribir cada
+componente y endpoint (cada una viene de un fallo real ya observado):
+
+1. **Declara las funciones helper ANTES del `useEffect`/handler que las usa.**
+   El React Compiler da error `Cannot access variable before it is declared` si un
+   `const fn = …` se llama dentro de un efecto declarado más arriba. Orden correcto:
+   estados → helpers (`loadX`, `resetX`) → efectos que los llaman.
+2. **No llames `setState` de forma síncrona en el cuerpo de un `useEffect`.**
+   Hazlo dentro del `.then()`/callback async (p. ej. `setLoading(false)` en `.finally`).
+   El `setState` síncrono en el cuerpo dispara el aviso `set-state-in-effect`.
+3. **Tipa los errores como `unknown` y haz narrowing** (`e instanceof Error`).
+   Minimiza `any`; en filtros de Prisma usa `Prisma.XWhereInput`, no `Record<string, any>`.
+4. **Cada página de listado tiene su endpoint GET.** Si hay una página de "mis
+   compras"/"mis productos", existe `GET /api/<entidad>?…`. No dejes una lista
+   alimentada por datos inline porque "aún no hay endpoint": crea el endpoint.
+5. **Teardown de tests respeta las FK.** En `afterAll`, borra las dependencias
+   antes que la entidad: primero `review`/`message`, luego `order`/`chat`, y al
+   final `product`. Si no, salta `Foreign key constraint violated`.
+6. **Versiones pinned = versiones publicadas reales.** Si añades una dependencia,
+   usa una versión que exista en el registro (`npm view <pkg> version`). No inventes
+   pines (un `react-pdf@9.3.0` o `@vitejs/plugin-react@4.5.3` inexistente revienta el install).
+
+Antes del handoff: ejecuta `pnpm exec tsc --noEmit`, `pnpm lint` y `pnpm build`
+y observa la salida en verde. No declares "compila" de memoria.
+
 ### Checker de wiring obligatorio
 
 Después de generar todas las páginas y endpoints, **verifica explícitamente**:

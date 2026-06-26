@@ -22,7 +22,8 @@
 - ORM/queries: Prisma 7
 - Estado cliente: Zustand 5
 - Data fetching: TanStack React Query 5 (server + client)
-- PDF: react-pdf
+- PDF *(solo si el PRD lo pide)*: react-pdf — no es base; añádelo al `package.json`
+  con su versión publicada real solo cuando una funcionalidad lo necesite.
 
 ## Versiones pinned
 
