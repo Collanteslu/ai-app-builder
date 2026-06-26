@@ -23,9 +23,9 @@ capas:
 | `app-brainstorm` | 0 *(opcional)* | Da forma a una idea difusa hablando → `brief.md` |
 | `app-discovery` | 1 | Entrevista guiada → `discovery.md` |
 | `app-prd` | 2 | Requisitos con IDs RF-XX → `prd.md` |
-| `app-architecture` | 3 | Datos + API + seguridad → `architecture.md` |
+| `app-architecture` | 3 | SDD: datos + API + seguridad + componentes/contratos (§7/§8) → `architecture.md` |
 | `app-mockup` | 4 | Sistema de diseño + mockups navegables → `design-system.md` + `mockup/` |
-| `app-scaffold` | 5 | Primer build funcional + tests derivado de todo → archivos |
+| `app-scaffold` | 5 | Primer build funcional con TDD doble bucle derivado de todo → archivos |
 | `app-audit` | 6 | Verifica trazabilidad → `audit.md` |
 
 Las 32 de conocimiento son el resto de carpetas dentro de `skills/`. El manifiesto
@@ -80,7 +80,7 @@ va llevando: no tienes que invocar cada
 skill a mano. Al cerrar cada fase hace commit del artefacto y emite un bloque de
 handoff con lo generado y la fase siguiente.
 
-## Por qué funciona (los 3 mecanismos)
+## Por qué funciona (mecanismos y refuerzos)
 
 1. **Checklist (Definition of Done)**: cada skill tiene casillas obligatorias.
    No cierra hasta marcarlas.
@@ -212,6 +212,12 @@ contrato:
 | RF-01 | Movimiento, Arma, Socio | POST /api/movimientos/salida | MovimientoService | registrarSalida |
 | RF-03 | Movimiento, Arma | GET /api/armas/fuera | ArmaQuery | listarFuera |
 
+## 7. Componentes
+| Componente | Responsabilidad | Cubre | Depende de |
+|-----------|-----------------|-------|------------|
+| MovimientoService | Registrar salida/devolución y estado del arma | RF-01 | ArmaRepo, SocioRepo |
+| ArmaQuery | Consultar armas fuera | RF-03 | ArmaRepo |
+
 ## 8. Contrato — MovimientoService
 - registrarSalida(socioId, armaId): Movimiento
   - Pre: socio con licencia vigente; arma DISPONIBLE.
@@ -232,8 +238,8 @@ Y como hay datos sensibles, el threat model es obligatorio:
 | Datos de socios | Acceso no autorizado | Auth + roles | RNF-01 |
 ```
 
-**Gate**: ✅ cada RF mapeado a entidad y endpoint, modelo con tipos, threat
-model presente. Avanza.
+**Gate**: ✅ cada RF mapeado a entidad, endpoint **y componente/contrato (§7/§8)**,
+modelo con tipos, threat model presente. Avanza.
 
 ### Fase 4 — Mockup
 
@@ -278,7 +284,7 @@ siguiente.
 
 ```markdown
 ## Matriz de trazabilidad
-| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test acept. | Contrato/comp. | Estado |
+| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test acept. | Test contrato | Estado |
 |----|-----------|-----|--------------|--------|--------|-------------|----------------|--------|
 | RF-01 | CU-01 | ✅ | ✅ | ✅ | ✅ | verde | sí | OK |
 | RF-03 | CU-03 | ✅ | ✅ | ✅ | ✅ | rojo | no | hueco menor |

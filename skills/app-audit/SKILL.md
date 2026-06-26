@@ -61,7 +61,7 @@ Estado: ✅ sin huecos críticos / ⚠️ con huecos / ❌ bloqueante
 [Conteo: X RF totales, Y completamente trazados, Z con hueco]
 
 ## Matriz de trazabilidad
-| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test acept. (verde/rojo) | Contrato/comp. (sí/no) | Estado |
+| RF | Discovery | PRD | Arquitectura | Mockup | Código | Test acept. (verde/rojo) | Test contrato (sí/no) | Estado |
 |----|-----------|-----|--------------|--------|--------|--------------------------|------------------------|--------|
 | RF-01 | CU-01 | ✅ | ✅ | ✅ | ✅ | verde | sí | OK |
 | RF-02 | CU-02 | ✅ | ✅ | ❌ | ⚠️ | rojo | no | hueco |
