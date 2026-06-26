@@ -83,7 +83,7 @@ jobs:
           echo "✓ opencode.json presente"
       - name: Validate .opencode structure
         run: |
-          for dir in agents instructions command; do
+          for dir in agents instructions commands; do
             if [ ! -d ".opencode/$dir" ]; then
               echo "⚠ .opencode/$dir no existe (opcional)"
             else

@@ -280,7 +280,7 @@ trazabilidad; bórralo si no la necesitas.
 
 opencode descubre automáticamente las skills desde `skills/`, los agentes desde
 `.opencode/agents/`, las instrucciones desde `.opencode/instructions/` y los
-comandos desde `.opencode/command/`. Abre el repo y todo funciona:
+comandos desde `.opencode/commands/`. Abre el repo y todo funciona:
 
 ```bash
 cd ruta/al/repo
