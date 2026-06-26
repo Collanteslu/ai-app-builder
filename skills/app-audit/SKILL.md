@@ -98,6 +98,8 @@ cerrar":
 | **CRÍTICO** (exit 1) | `WIRING` | `fetch('/api/X')` sin su carpeta `src/app/api/X/` |
 | **CRÍTICO** (exit 1) | `ORPHAN-SERVICE` | servicio que no se usa en ningún endpoint ni componente (capa de lógica muerta) |
 | **CRÍTICO** (exit 1) | `NO-ZOD` | endpoint que lee el body sin validarlo con Zod |
+| **CRÍTICO** (exit 1) | `CREATE-EDIT` | hay `*/new/page.tsx` (creación) pero falta `*/[id]/edit/page.tsx` (edición) |
+| **AVISO** | `CRUD` | entidad creable sin su página de listado o detalle |
 | **AVISO** | `E2E-PLACEHOLDER` | sin e2e real del flujo principal |
 | **AVISO** | `TEST-DB` | sin BD de test aislada (`docker-compose.test.yml`) |
 

@@ -9,9 +9,10 @@
 //
 // Severidad:
 //   CRÍTICO  → bloquea el cierre (exit 1): datos inline, fetch sin endpoint,
-//              servicio huérfano (capa de lógica muerta), endpoint sin Zod.
+//              servicio huérfano (capa de lógica muerta), endpoint sin Zod,
+//              entidad creable que no es editable (CREATE/EDIT symmetry).
 //   AVISO    → no bloquea (exit 0), pero se reporta: e2e placeholder, test DB
-//              no aislada.
+//              no aislada, CRUD incompleto (creable sin listado/detalle).
 //
 // Opt-out puntual: añade `// audit-ignore` en la misma línea o la anterior.
 
@@ -136,6 +137,26 @@ const hasTests = files.some((f) => /\.test\.ts$/.test(posix(f)));
 const usesPrisma = existsSync(join(ROOT, "prisma", "schema.prisma"));
 if (hasTests && usesPrisma && !existsSync(join(ROOT, "docker-compose.test.yml"))) {
   warn("TEST-DB", "docker-compose.test.yml", "no existe la BD de test aislada; los tests comparten la BD de desarrollo.");
+}
+
+// ── 7. CRÍTICO — CREATE/EDIT symmetry (toda entidad creable es editable) ──────
+const newPages = files.filter((f) => /\/new\/page\.tsx$/.test(posix(f)));
+const fromRoot = (p) => join(ROOT, ...p.split("/"));
+for (const np of newPages) {
+  const entityDir = posix(np).replace(/\/new\/page\.tsx$/, "");
+  if (!existsSync(fromRoot(`${entityDir}/[id]/edit/page.tsx`))) {
+    crit("CREATE-EDIT", posix(np), `hay página de creación pero falta la de edición (${entityDir}/[id]/edit/page.tsx). Toda entidad creable debe ser editable.`);
+  }
+}
+
+// ── 8. AVISO — CRUD completo (la entidad creable tiene listado y detalle) ─────
+for (const np of newPages) {
+  const entityDir = posix(np).replace(/\/new\/page\.tsx$/, "");
+  for (const [label, rel] of [["listado", `${entityDir}/page.tsx`], ["detalle", `${entityDir}/[id]/page.tsx`]]) {
+    if (!existsSync(fromRoot(rel))) {
+      warn("CRUD", entityDir, `entidad creable sin página de ${label} (${rel}).`);
+    }
+  }
 }
 
 // ── Informe ───────────────────────────────────────────────────────────────────
