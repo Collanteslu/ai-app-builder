@@ -26,10 +26,9 @@
 
 ## Versiones pinned
 
-> Las versiones exactas están en `template/` (`package.json`, `.nvmrc`, `.npmrc`).
-> Cópialo todo antes de empezar — así evitas el paraguas `^` y usas pnpm.
-
-    xcopy /E template\* destino\
+> Las versiones exactas están en `template/` (`package.json`, `.nvmrc`, `.npmrc`,
+> `prisma.config.ts`, etc.). Cópialo todo antes de empezar — así evitas el
+> paraguas `^` y usas pnpm.
 
 ## Convenciones
 

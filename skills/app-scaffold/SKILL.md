@@ -16,13 +16,18 @@ de prioridad alta debe FUNCIONAR de punta a punta, aunque sea con datos en memor
 
 Los versionados exactos están en `template/`. Cópialos antes de hacer nada:
 
-    xcopy /E template\* destino\
-    cd destino
+    # Windows (PowerShell):
+    Copy-Item -Recurse -Path template\* -Destination destino\
+    # macOS / Linux:
+    # cp -r template/. destino/   # el . incluye dotfiles
+
+    Set-Location -LiteralPath destino
     pnpm install
 
 Esto te da: `.nvmrc`, `.npmrc` (pnpm + `save-exact=true`), `package.json`
 (versiones fijas sin `^`), `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`,
-`globals.css` (Tailwind v4 con `@theme`), y `.gitignore`.
+`globals.css` (Tailwind v4 con `@theme`), `prisma.config.ts` (Prisma 7),
+`prisma/schema.prisma`, y `.gitignore`.
 
 ### 1. Lee los docs del proyecto
 
