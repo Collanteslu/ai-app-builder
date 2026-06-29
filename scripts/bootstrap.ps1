@@ -53,13 +53,131 @@ Get-ChildItem -Force -Path (Join-Path $cache 'template') -Exclude 'node_modules'
   Copy-Item -Recurse -Force -Destination $tplDest
 Write-Host "✅ template instalado en .claude\template"
 
-$ocDest = Join-Path $proj '.opencode'
-if (Test-Path $ocDest) { Remove-Item -Recurse -Force $ocDest }
-New-Item -ItemType Directory -Force -Path $ocDest | Out-Null
-Get-ChildItem -Force -Path (Join-Path $cache '.opencode') -Exclude 'node_modules' |
-  Copy-Item -Recurse -Force -Destination $ocDest
-Copy-Item -Force (Join-Path $cache 'opencode.json') (Join-Path $proj 'opencode.json')
-Write-Host "✅ .opencode + opencode.json instalados (soporte opencode)"
+# ── Configuración por plataforma ──────────────────────────────────────────
+Write-Host ""
+Write-Host "¿Con cuál plataforma usarás el AI App Builder?"
+Write-Host "  1) Claude Code (CLI / Desktop / Web app)"
+Write-Host "  2) OpenCode"
+Write-Host "  3) Ambas"
+$platform_choice = Read-Host "Opción (1-3)"
+
+# Claude Code: crear CLAUDE.md
+if ($platform_choice -eq "1" -or $platform_choice -eq "3") {
+  $claudeMd = Join-Path $proj 'CLAUDE.md'
+  if (-not (Test-Path $claudeMd)) {
+    @"
+# Instrucciones para Claude Code
+
+Este proyecto usa el **AI App Builder** — un proceso estructurado de 6 fases
+para construir aplicaciones con trazabilidad de requisitos (RF-XX).
+
+## Flujo principal
+
+``````
+Quiero crear una aplicación para [tu idea]
+``````
+
+O la frase inequívoca si los agentes no se cargan:
+
+``````
+inicia el constructor de apps
+``````
+
+## Fases
+
+El orquestador conduce 6 fases:
+
+1. **Discovery** → casos de uso (CU-XX)
+2. **PRD** → requisitos (RF-XX) con criterios de aceptación
+3. **Arquitectura** → modelo de datos, endpoints, SDD
+4. **Mockup** → diseño visual navegable
+5. **Scaffold** → código + tests (TDD)
+6. **Auditoría** → verificación de trazabilidad
+
+## Gates
+
+- ``trace-lint.mjs``: ejecutable en Fase 2 y 3 (verifica trazabilidad de requisitos)
+- ``audit:builder``: ejecutable en Fase 5 y 6 (verifica wiring y calidad)
+- ``audit:wiring``: ejecutable en Fase 5 (verifica fetch → endpoint)
+
+Todos los gates deben pasar (exit 0) para avanzar.
+
+## Memoria persistente
+
+El proceso captura en ``.builder/memory/`` las decisiones, gotchas y restricciones
+que aparecen en cada fase. Esto evita repetir errores y re-litigar decisiones
+ya tomadas en sesiones anteriores.
+
+## Configuración
+
+Edita ``stack.md`` antes de empezar (define tu tech stack, Auth, Infra).
+
+---
+
+Para más detalles: ``.claude/skills/app-orchestrator/SKILL.md``
+"@ | Set-Content -Path $claudeMd -Encoding UTF8
+    Write-Host "✅ CLAUDE.md creado (instrucciones para Claude Code)"
+  }
+}
+
+# OpenCode: configurar .opencode + opencode.json
+if ($platform_choice -eq "2" -or $platform_choice -eq "3") {
+  $ocDest = Join-Path $proj '.opencode'
+  if (Test-Path $ocDest) { Remove-Item -Recurse -Force $ocDest }
+  New-Item -ItemType Directory -Force -Path $ocDest | Out-Null
+  Get-ChildItem -Force -Path (Join-Path $cache '.opencode') -Exclude 'node_modules' |
+    Copy-Item -Recurse -Force -Destination $ocDest
+  Copy-Item -Force (Join-Path $cache 'opencode.json') (Join-Path $proj 'opencode.json')
+  Write-Host "✅ .opencode + opencode.json instalados (soporte OpenCode)"
+
+  # Crear OPENCODE.md
+  $opencodeMd = Join-Path $proj 'OPENCODE.md'
+  if (-not (Test-Path $opencodeMd)) {
+    @"
+# Instrucciones para OpenCode
+
+Este proyecto usa el **AI App Builder** en OpenCode.
+
+## Agentes especializados
+
+El proceso usa 3 agentes con permisos limitados:
+
+1. **arquitecto** (Fase 3): diseña SDD, read-only en código
+   ``````
+   /load arquitecto
+   ``````
+
+2. **scaffolder** (Fase 5): genera código, write/edit/bash/browser
+   ``````
+   /load scaffolder
+   ``````
+
+3. **auditor** (Fase 6): verifica trazabilidad, read-only
+   ``````
+   /load auditor
+   ``````
+
+## Flujo principal
+
+``````
+/build-app quiero crear una aplicación para [tu idea]
+``````
+
+## Skills incluidas
+
+Todas las skills están en ``.opencode/`` — llama ``/help`` para listarlas.
+
+## Configuración
+
+Edita ``stack.md`` antes de empezar (define tech stack, Auth, Infra).
+
+---
+
+Para más detalles: ``.opencode/skills/app-orchestrator/SKILL.md``
+"@ | Set-Content -Path $opencodeMd -Encoding UTF8
+    Write-Host "✅ OPENCODE.md creado (instrucciones para OpenCode)"
+  }
+}
 
 foreach ($f in @('stack.md', 'model-profiles.md')) {
   $src = Join-Path $cache "config\$f"

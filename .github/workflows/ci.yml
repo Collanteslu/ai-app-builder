@@ -1,4 +1,4 @@
-name: CI — Gates y tests
+name: CI
 
 on:
   push:
@@ -12,125 +12,202 @@ concurrency:
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
-  # Validación de estructura del constructor y skills
+  # Validación de skills y config del constructor
   # ──────────────────────────────────────────────────────────────────────────
-  builder-validate:
+  validate-skills:
     runs-on: ubuntu-latest
-    name: Validar estructura del constructor
+    name: Skills — frontmatter + índice
     steps:
       - uses: actions/checkout@v4
-
-      # Verifica que SKILL.md de cada skill tiene header válido
-      - name: Validar headers de SKILL.md
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check SKILL.md frontmatter
         run: |
-          set -e
-          for skill in skills/*/SKILL.md; do
-            if [ -f "$skill" ]; then
-              echo "Validando $skill..."
-              # El archivo debe empezar con ---, tener name y description, luego otro ---
-              if ! head -1 "$skill" | grep -q "^---"; then
-                echo "❌ $skill: no comienza con ---"
-                exit 1
-              fi
+          errors=0
+          for skill in skills/*/; do
+            name=$(basename "$skill")
+            file="${skill}SKILL.md"
+            if [ ! -f "$file" ]; then
+              echo "❌ $name: SKILL.md no existe"
+              errors=$((errors+1))
+              continue
+            fi
+            first=$(grep -m1 -v '^[[:space:]]*$' "$file")
+            if [ "$first" != "---" ]; then
+              echo "❌ $name: falta frontmatter (la primera línea con contenido debe ser ---)"
+              errors=$((errors+1))
+            fi
+            if ! grep -q "^name:" "$file"; then
+              echo "❌ $name: falta campo 'name' en frontmatter"
+              errors=$((errors+1))
+            fi
+            if ! grep -q "^description:" "$file"; then
+              echo "❌ $name: falta campo 'description' en frontmatter"
+              errors=$((errors+1))
+            fi
+            actual_name=$(grep "^name:" "$file" | sed 's/^name:[[:space:]]*//')
+            if [ "$actual_name" != "$name" ]; then
+              echo "❌ $name: name '$actual_name' no coincide con el directorio"
+              errors=$((errors+1))
             fi
           done
-          echo "✅ Headers de SKILL.md válidos"
-
-      # Verifica que opencode.json es JSON válido
-      - name: Validar opencode.json
-        run: |
-          if [ -f opencode.json ]; then
-            node -e "JSON.parse(require('fs').readFileSync('opencode.json', 'utf8'))" \
-              && echo "✅ opencode.json es JSON válido" \
-              || (echo "❌ opencode.json tiene errores"; exit 1)
+          if [ $errors -gt 0 ]; then
+            echo "---"
+            echo "Total de errores: $errors"
+            exit 1
           fi
+          echo "✓ Todas las skills válidas"
 
-      # Verifica que los agentes están registrados en opencode.json
-      - name: Validar agentes en opencode.json
+      - name: INDEX.md ↔ skills/ sincronizados
         run: |
-          if [ -f opencode.json ]; then
-            node -e "
-              const cfg = JSON.parse(require('fs').readFileSync('opencode.json', 'utf8'));
-              const agents = ['arquitecto', 'scaffolder', 'auditor'];
-              for (const agent of agents) {
-                if (!cfg.agents || !cfg.agents[agent]) {
-                  console.error('❌ Agente ' + agent + ' no registrado en opencode.json');
-                  process.exit(1);
-                }
-              }
-              console.log('✅ Agentes registrados: arquitecto, scaffolder, auditor');
-            " \
-            || exit 1
-          fi
+          node <<'SCRIPT'
+          const fs = require("fs");
+          const index = fs.readFileSync("skills/INDEX.md", "utf8");
+          const dirs = fs.readdirSync("skills", { withFileTypes: true })
+            .filter((d) => d.isDirectory())
+            .map((d) => d.name);
+          const listed = new Set();
+          for (const m of index.matchAll(/^\|\s*`([a-z0-9-]+)`/gim)) listed.add(m[1]);
+          const missingInIndex = dirs.filter((d) => !listed.has(d));
+          const missingOnDisk = [...listed].filter((n) => !dirs.includes(n));
+          let err = 0;
+          if (missingInIndex.length) {
+            console.error("❌ Skills sin entrada en INDEX.md: " + missingInIndex.join(", "));
+            err = 1;
+          }
+          if (missingOnDisk.length) {
+            console.error("❌ INDEX.md lista skills sin directorio: " + missingOnDisk.join(", "));
+            err = 1;
+          }
+          if (!err) console.log("✓ INDEX.md y skills/ sincronizados (" + dirs.length + " skills)");
+          process.exit(err);
+          SCRIPT
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Gates ejecutables en el template (si existe)
-  # ──────────────────────────────────────────────────────────────────────────
-  template-gates:
+  validate-config:
     runs-on: ubuntu-latest
-    name: Verificar gates en template
-    if: hashFiles('template/scripts/audit.mjs') != ''
+    name: Config — opencode.json + estructura
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version-file: template/.nvmrc
-          cache: pnpm
-          cache-dependency-path: template/pnpm-lock.yaml
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
-
-      - name: "Gate: trace-lint en template"
+          node-version: "22"
+      - name: opencode.json es JSON válido
         run: |
-          cd template
-          # trace-lint debe pasar en un template limpio (no hay .builder/ aún)
-          if node scripts/trace-lint.mjs; then
-            echo "✅ trace-lint pasa (no hay .builder/ aún)"
-          else
-            echo "✅ trace-lint es tolerante (sin .builder/)"
+          if [ ! -f opencode.json ]; then
+            echo "❌ opencode.json no existe"
+            exit 1
           fi
-
-      - name: "Gate: audit-wiring en template"
+          node -e "JSON.parse(require('fs').readFileSync('opencode.json','utf8'))" \
+            && echo "✓ opencode.json es JSON válido" \
+            || { echo "❌ opencode.json no es JSON válido"; exit 1; }
+      - name: Estructura .opencode presente
         run: |
-          cd template
-          # audit-wiring debe pasar si el template no tiene código roto
-          if node scripts/audit-wiring.mjs; then
-            echo "✅ audit-wiring pasa en template limpio"
-          else
-            echo "⚠️  audit-wiring reporta (puede haber código temporal)"
-          fi
-        continue-on-error: true
+          for dir in agents instructions commands; do
+            if [ ! -d ".opencode/$dir" ]; then
+              echo "⚠ .opencode/$dir no existe (opcional)"
+            else
+              echo "✓ .opencode/$dir presente"
+            fi
+          done
+      - name: Agentes markdown con permission válido
+        run: |
+          node <<'SCRIPT'
+          const fs = require("fs");
+          const path = require("path");
+          const dir = ".opencode/agents";
+          if (!fs.existsSync(dir)) process.exit(0);
+          let err = 0;
+          for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".md"))) {
+            const content = fs.readFileSync(path.join(dir, f), "utf8");
+            if (!content.startsWith("---")) {
+              console.error("❌ " + f + ": falta frontmatter");
+              err = 1; continue;
+            }
+            const end = content.indexOf("---", 3);
+            const fm = content.slice(3, end);
+            if (!/^description:/m.test(fm)) {
+              console.error("❌ " + f + ': falta "description" (obligatorio en opencode)');
+              err = 1;
+            }
+          }
+          if (!err) console.log("✓ Agentes válidos");
+          process.exit(err);
+          SCRIPT
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Lint del repo del constructor (skills, config, docs)
+  # Template: typecheck, lint, build
+  # ──────────────────────────────────────────────────────────────────────────
+  validate-template:
+    runs-on: ubuntu-latest
+    name: Template — tsc / lint / build
+    defaults:
+      run:
+        working-directory: template
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: template/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm lint
+      - run: pnpm test:run
+      - run: pnpm build
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Gates ejecutables: pasan en verde sobre el template limpio y BLOQUEAN
+  # ante un hueco real. Un gate roto que siempre devuelve 0 sería peor que
+  # no tener gate.
+  # ──────────────────────────────────────────────────────────────────────────
+  test-gates:
+    runs-on: ubuntu-latest
+    name: Gates — bloquean de verdad
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: audit.mjs pasa sobre el template limpio (exit 0)
+        working-directory: template
+        run: node scripts/audit.mjs
+      - name: audit.mjs BLOQUEA un fetch huérfano (exit 1)
+        run: |
+          fx=$(mktemp -d)
+          mkdir -p "$fx/src/app/p"
+          printf 'export default function P(){fetch("/api/ghost/x");return null}\n' > "$fx/src/app/p/page.tsx"
+          if (cd "$fx" && node "$GITHUB_WORKSPACE/template/scripts/audit.mjs"); then
+            echo "❌ audit.mjs NO bloqueó un fetch a endpoint inexistente"; exit 1
+          fi
+          echo "✓ audit.mjs bloqueó el hueco como se esperaba"
+      - name: trace-lint.mjs BLOQUEA un RF sin arquitectura (exit 1)
+        run: |
+          fx=$(mktemp -d); mkdir -p "$fx/.builder"
+          printf '# PRD\n## RF-01 — X · Prioridad: alta\nDado A, Cuando B, Entonces C.\n' > "$fx/.builder/prd.md"
+          printf '# Arquitectura\n(sin RF-01)\n' > "$fx/.builder/architecture.md"
+          if (cd "$fx" && node "$GITHUB_WORKSPACE/template/scripts/trace-lint.mjs"); then
+            echo "❌ trace-lint.mjs NO bloqueó un RF ausente en la arquitectura"; exit 1
+          fi
+          echo "✓ trace-lint.mjs bloqueó el hueco como se esperaba"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Lint del repo: scripts Node válidos y markdown no vacío
   # ──────────────────────────────────────────────────────────────────────────
   lint:
     runs-on: ubuntu-latest
-    name: Lint — scripts y documentación
+    name: Lint — scripts y docs
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validar Markdown en docs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Scripts .mjs del template son Node válido
         run: |
-          # Busca archivos .md que NO sean README ni SKILL.md
-          # y verifica que no están vacíos
-          for file in config/*.md skills/**/*.md .opencode/**/*.md; do
-            if [ -f "$file" ]; then
-              if [ ! -s "$file" ]; then
-                echo "⚠️  $file está vacío"
-              fi
-            fi
-          done
-          echo "✅ Validación de Markdown completada"
-
-      - name: Validar scripts (Node)
-        run: |
-          # Verifica que los scripts .mjs del template son Node válido
           for script in template/scripts/*.mjs; do
             if [ -f "$script" ]; then
               if ! node --check "$script" 2>&1; then
@@ -140,54 +217,46 @@ jobs:
             fi
           done
           echo "✅ Scripts Node válidos"
+      - name: Markdown no vacío
+        run: |
+          for file in config/*.md skills/**/SKILL.md .opencode/**/*.md; do
+            if [ -f "$file" ] && [ ! -s "$file" ]; then
+              echo "⚠️  $file está vacío"
+            fi
+          done
+          echo "✅ Validación de Markdown completada"
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Tests de integración: verifica que el instalador funciona
+  # Instalación: los scripts de bootstrap son sintácticamente válidos
   # ──────────────────────────────────────────────────────────────────────────
   install-test:
     runs-on: ubuntu-latest
-    name: Verificar instalación (Bootstrap)
+    name: Instalación — scripts válidos
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js y pnpm
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
-
-      - name: Validar scripts de instalación
+      - name: Scripts de instalación
         run: |
-          # Windows PowerShell script
-          if [ -f scripts/bootstrap.ps1 ]; then
-            echo "✅ bootstrap.ps1 existe"
+          [ -f scripts/bootstrap.ps1 ] && echo "✅ bootstrap.ps1 existe"
+          if [ -f scripts/install.sh ] && ! bash -n scripts/install.sh 2>&1; then
+            echo "❌ install.sh tiene errores"; exit 1
           fi
-          # Bash script
-          if [ -f scripts/install.sh ]; then
-            if ! bash -n scripts/install.sh 2>&1; then
-              echo "❌ install.sh tiene errores"
-              exit 1
-            fi
-            echo "✅ install.sh es válido"
-          fi
+          [ -f scripts/install.sh ] && echo "✅ install.sh es válido"
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Resumen
+  # Resumen (gate único de cierre)
   # ──────────────────────────────────────────────────────────────────────────
   summary:
     runs-on: ubuntu-latest
     name: "✅ CI completo"
     if: always()
-    needs: [builder-validate, lint, install-test]
+    needs: [validate-skills, validate-config, validate-template, test-gates, lint, install-test]
     steps:
       - name: Check results
         run: |
-          if [ "${{ needs.builder-validate.result }}" != "success" ] || \
+          if [ "${{ needs.validate-skills.result }}" != "success" ] || \
+             [ "${{ needs.validate-config.result }}" != "success" ] || \
+             [ "${{ needs.validate-template.result }}" != "success" ] || \
+             [ "${{ needs.test-gates.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.install-test.result }}" != "success" ]; then
             echo "❌ CI falló"

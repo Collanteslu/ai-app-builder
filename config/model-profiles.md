@@ -22,9 +22,38 @@ con un solo modelo; estos perfiles solo te ayudan a asignar potencia donde rinde
 ## Cómo aplicarlo
 
 ### En opencode (perfiles SDD nativos)
-opencode permite asignar modelo por agente. Asigna el modelo capaz a `arquitecto`
-y `auditor`, y uno más rápido a `scaffolder`. Consulta la documentación de
-opencode para la sintaxis de `model` por agente en `.opencode/agents/*.md`.
+opencode permite asignar modelo por agente en el frontmatter de
+`.opencode/agents/*.md` (campo `model: <provider>/<model-id>`). Por defecto los
+agentes heredan el modelo de la sesión; para aplicar este perfil, asigna el modelo
+capaz a `arquitecto` y `auditor` y uno más rápido a `scaffolder`. Ejemplo:
+
+```yaml
+# .opencode/agents/arquitecto.md
+---
+description: ...
+mode: subagent
+model: anthropic/claude-sonnet-4-5      # perfil alto (criterio)
+permission:
+  edit: allow
+  bash: allow
+---
+```
+
+```yaml
+# .opencode/agents/scaffolder.md
+---
+description: ...
+mode: subagent
+model: anthropic/claude-haiku-4-5        # perfil rápido (mecánica)
+permission:
+  edit: allow
+  bash: allow
+---
+```
+
+El ID depende de tu provider (`anthropic/...`, `opencode/...`, etc.); ejecuta
+`opencode models` para ver los disponibles. Deja el campo fuera si prefieres un
+solo modelo para toda la sesión.
 
 ### En Claude Code
 No hay cambio de modelo por fase automático: trabajas con el modelo de la sesión.
