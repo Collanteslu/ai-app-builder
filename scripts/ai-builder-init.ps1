@@ -3,20 +3,13 @@
   Master installer — Elige plataforma: Claude Code, OpenCode, Reasonix, o Múltiples.
 
 .DESCRIPTION
-  Instalador inteligente que pregunta primero, luego instala solo lo que pidió.
-
-  Uso:
-    irm https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/ai-builder-init.ps1 | iex
-
-  Pregunta: ¿Claude Code, OpenCode, Reasonix, o Múltiples?
-  Según respuesta, ejecuta el instalador correspondiente.
+  Instalador inteligente que:
+  1. Pregunta qué plataforma quieres
+  2. Descarga el repo una sola vez
+  3. Ejecuta el instalador correspondiente
 #>
 
 $ErrorActionPreference = 'Stop'
-
-# ──────────────────────────────────────────────────────────────────────────
-# Verificaciones previas
-# ──────────────────────────────────────────────────────────────────────────
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
   Write-Error "Necesitas git instalado."; exit 1
@@ -52,99 +45,199 @@ if ($choice -notin @("1", "2", "3", "4")) {
 }
 
 # ──────────────────────────────────────────────────────────────────────────
-# Descargar los instaladores desde el repo
+# Descargar repo una sola vez
 # ──────────────────────────────────────────────────────────────────────────
 
-$tmpDir = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "ai-builder-$(Get-Random)") -Force
-$baseUrl = "https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2"
+$tmpDir = Join-Path $env:TEMP "ai-builder-$(Get-Random)"
+New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
 
 Write-Host ""
-Write-Host "⤓ Descargando instaladores..."
+Write-Host "⤓ Descargando constructor..."
+git clone --depth 1 --branch v2 https://github.com/Collanteslu/ai-app-builder.git $tmpDir -q
 
-# Descargar bootstrap.ps1 (Claude Code)
-$claudeInstaller = "$tmpDir\claude-init.ps1"
-Invoke-WebRequest -Uri "$baseUrl/scripts/bootstrap.ps1" -OutFile $claudeInstaller -UseBasicParsing
+$repoDir = $tmpDir
+$proj = (Get-Location).Path
 
-# Descargar opencode equivalent
-$opencodeInstaller = "$tmpDir\opencode-init.ps1"
-# Para OpenCode usamos bootstrap pero con opción 2
-$opencodeScript = @"
-`$choice = "2"
-`$proj = (Get-Location).Path
-`$repoUrl = "https://github.com/Collanteslu/ai-app-builder.git"
-`$branch = "v2"
+# ──────────────────────────────────────────────────────────────────────────
+# Funciones comunes
+# ──────────────────────────────────────────────────────────────────────────
 
-# Seguir con install.sh (convertido a PS)
-`$tmpDir = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "ai-builder-$(Get-Random)") -Force
-git clone --depth 1 --branch `$branch `$repoUrl `$tmpDir -q
+function Install-Claude {
+  Write-Host ""
+  Write-Host "📦 Instalando para Claude Code..."
+  Write-Host ""
 
-# ... resto del bootstrap pero solo instalando OpenCode
+  New-Item -ItemType Directory -Force -Path "$proj\.claude" | Out-Null
+
+  # Skills
+  Write-Host "  • Instalando skills..."
+  if (Test-Path "$proj\.claude\skills") { Remove-Item -Recurse -Force "$proj\.claude\skills" }
+  New-Item -ItemType Directory -Force -Path "$proj\.claude\skills" | Out-Null
+  Copy-Item -Recurse -Force -Path (Join-Path $repoDir 'skills\*') -Destination "$proj\.claude\skills"
+  $count = (Get-ChildItem -Directory (Join-Path $repoDir 'skills')).Count
+  Write-Host "    ✅ $count skills"
+
+  # Template
+  Write-Host "  • Instalando template..."
+  if (Test-Path "$proj\.claude\template") { Remove-Item -Recurse -Force "$proj\.claude\template" }
+  New-Item -ItemType Directory -Force -Path "$proj\.claude\template" | Out-Null
+  Get-ChildItem -Force -Path (Join-Path $repoDir 'template') -Exclude 'node_modules', '.next' |
+    Copy-Item -Recurse -Force -Destination "$proj\.claude\template"
+  Write-Host "    ✅ template"
+
+  # CLAUDE.md
+  if (-not (Test-Path "$proj\CLAUDE.md")) {
+    Copy-Item (Join-Path $repoDir 'CLAUDE.md') "$proj\CLAUDE.md"
+    Write-Host "    ✅ CLAUDE.md"
+  }
+
+  # Config
+  Copy-Item (Join-Path $repoDir 'config\stack.md') "$proj\stack.md" -ErrorAction SilentlyContinue
+  Copy-Item (Join-Path $repoDir 'config\model-profiles.md') "$proj\model-profiles.md" -ErrorAction SilentlyContinue
+
+  # .gitignore
+  if (-not (Test-Path "$proj\.gitignore")) {
+    Copy-Item (Join-Path $repoDir '.gitignore') "$proj\.gitignore"
+  }
+
+  # git init
+  if (-not (Test-Path "$proj\.git")) {
+    git -C $proj init -q
+    git -C $proj add -A
+    git -C $proj commit -q -m "chore: bootstrap claude code" 2>$null
+  }
+
+  Write-Host ""
+  Write-Host "✅ Instalación completada para Claude Code"
+  Write-Host ""
+  Write-Host "Próximos pasos:"
+  Write-Host "  1. Edita stack.md"
+  Write-Host "  2. Abre Claude Code y di: 'Quiero crear una aplicación para [tu idea]'"
+  Write-Host ""
+}
+
+function Install-Reasonix {
+  Write-Host ""
+  Write-Host "📦 Instalando para Reasonix..."
+  Write-Host ""
+
+  New-Item -ItemType Directory -Force -Path "$proj\.reasonix" | Out-Null
+
+  # Agentes
+  Write-Host "  • Instalando agentes..."
+  if (Test-Path "$proj\.reasonix\agents") { Remove-Item -Recurse -Force "$proj\.reasonix\agents" }
+  Copy-Item -Recurse -Force -Path (Join-Path $repoDir '.opencode\agents') -Destination "$proj\.reasonix\"
+  Write-Host "    ✅ arquitecto, scaffolder, auditor"
+
+  # Skills
+  Write-Host "  • Instalando skills..."
+  if (Test-Path "$proj\.reasonix\skills") { Remove-Item -Recurse -Force "$proj\.reasonix\skills" }
+  New-Item -ItemType Directory -Force -Path "$proj\.reasonix\skills" | Out-Null
+  Get-ChildItem -Path (Join-Path $repoDir 'skills') -Directory | ForEach-Object {
+    Copy-Item -Recurse -Force -Path $_.FullName -Destination "$proj\.reasonix\skills\"
+  }
+  Write-Host "    ✅ 41 skills"
+
+  # Template
+  Write-Host "  • Instalando template..."
+  if (Test-Path "$proj\.reasonix\template") { Remove-Item -Recurse -Force "$proj\.reasonix\template" }
+  New-Item -ItemType Directory -Force -Path "$proj\.reasonix\template" | Out-Null
+  Get-ChildItem -Force -Path (Join-Path $repoDir 'template') -Exclude 'node_modules', '.next' |
+    Copy-Item -Recurse -Force -Destination "$proj\.reasonix\template"
+  Write-Host "    ✅ template"
+
+  # REASONIX.md
+  if (-not (Test-Path "$proj\REASONIX.md")) {
+    # Crear un REASONIX.md básico
+    $reasonixMd = @"
+# AI App Builder — Instrucciones para Reasonix
+
+Este proyecto usa el **AI App Builder** — un proceso profesional de 6 fases.
+
+## Flujo principal
+
+``````bash
+reasonix /build-app quiero crear una aplicación para [tu idea]
+``````
+
+## Agentes como roles
+
+Fase 3: Eres **arquitecto** (read-only código, write architecture.md)
+Fase 5: Eres **scaffolder** (full write/edit/bash)
+Fase 6: Eres **auditor** (read-only código, write audit.md)
+
+## Gates
+
+``````bash
+pnpm trace:builder      # Trazabilidad (F2, F3)
+pnpm audit:builder      # Wiring y calidad (F5, F6)
+pnpm audit:wiring       # Fetch→endpoint (F5)
+``````
+
+Lee REASONIX.md en el proyecto para instrucciones completas.
 "@
-Set-Content -Path $opencodeInstaller -Value $opencodeScript
+    Set-Content -Path "$proj\REASONIX.md" -Value $reasonixMd -Encoding UTF8
+  }
 
-# Descargar reasonix-init.ps1
-$reasonixInstaller = "$tmpDir\reasonix-init.ps1"
-Invoke-WebRequest -Uri "$baseUrl/scripts/reasonix-init.ps1" -OutFile $reasonixInstaller -UseBasicParsing -q
+  # reasonix.toml
+  if (-not (Test-Path "$proj\reasonix.toml")) {
+    $tomlContent = @"
+# Reasonix Configuration for AI App Builder
+
+default_model = "deepseek-chat"
+
+[[providers]]
+name = "deepseek"
+kind = "openai"
+base_url = "https://api.deepseek.com"
+model = "deepseek-chat"
+api_key_env = "DEEPSEEK_API_KEY"
+"@
+    Set-Content -Path "$proj\reasonix.toml" -Value $tomlContent -Encoding UTF8
+  }
+
+  # Config
+  Copy-Item (Join-Path $repoDir 'config\stack.md') "$proj\stack.md" -ErrorAction SilentlyContinue
+
+  # .gitignore
+  if (-not (Test-Path "$proj\.gitignore")) {
+    Copy-Item (Join-Path $repoDir '.gitignore') "$proj\.gitignore"
+  }
+
+  # git init
+  if (-not (Test-Path "$proj\.git")) {
+    git -C $proj init -q
+    git -C $proj add -A
+    git -C $proj commit -q -m "chore: bootstrap reasonix" 2>$null
+  }
+
+  Write-Host ""
+  Write-Host "✅ Instalación completada para Reasonix"
+  Write-Host ""
+  Write-Host "Próximos pasos:"
+  Write-Host "  1. Edita stack.md"
+  Write-Host "  2. export DEEPSEEK_API_KEY=sk-..."
+  Write-Host "  3. reasonix /build-app quiero crear una aplicación para [tu idea]"
+  Write-Host ""
+}
 
 # ──────────────────────────────────────────────────────────────────────────
 # Ejecutar según opción
 # ──────────────────────────────────────────────────────────────────────────
 
 switch ($choice) {
-  "1" {
-    Write-Host ""
-    Write-Host "📦 Instalando para Claude Code..."
-    Write-Host ""
-    # Ejecutar bootstrap.ps1 pero simulando opción 1
-    $env:_BUILDER_CHOICE = "1"
-    & $claudeInstaller
-  }
-  "2" {
-    Write-Host ""
-    Write-Host "📦 Instalando para OpenCode..."
-    Write-Host ""
-    # Necesitaríamos download install.sh y convertirlo a PS o ejecutarlo vía Git Bash
-    # Por ahora, información clara
-    Write-Host "⚠️  Para OpenCode en Windows, usa:"
-    Write-Host "   bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/install.sh)"
-    Write-Host ""
-    Write-Host "   O descarga manualmente:"
-    Write-Host "   https://github.com/Collanteslu/ai-app-builder"
-    Write-Host ""
-  }
-  "3" {
-    Write-Host ""
-    Write-Host "📦 Instalando para Reasonix..."
-    Write-Host ""
-    & $reasonixInstaller
-  }
+  "1" { Install-Claude }
+  "2" { Write-Host "Para OpenCode en Windows, usa Bash (Git Bash / WSL)" }
+  "3" { Install-Reasonix }
   "4" {
     Write-Host ""
-    Write-Host "📦 Instalando para Claude Code + OpenCode + Reasonix..."
+    Write-Host "📦 Instalando para todas las plataformas..."
+    Install-Claude
     Write-Host ""
-    Write-Host "Este instalador se ejecutará 3 veces (una por plataforma)."
+    Write-Host "Para OpenCode, ejecuta en Git Bash:"
+    Write-Host "  bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/install.sh)"
     Write-Host ""
-
-    # Claude Code
-    Write-Host "─ Fase 1: Claude Code"
-    $env:_BUILDER_CHOICE = "1"
-    & $claudeInstaller
-
-    # OpenCode (manual, requiere Bash)
-    Write-Host ""
-    Write-Host "─ Fase 2: OpenCode (requiere Bash)"
-    Write-Host "   Ejecuta en Git Bash:"
-    Write-Host "   bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/install.sh)"
-    Write-Host ""
-
-    # Reasonix
-    Write-Host ""
-    Write-Host "─ Fase 3: Reasonix"
-    & $reasonixInstaller
-
-    Write-Host ""
-    Write-Host "✅ Instalación múltiple completada"
-    Write-Host "   Nota: .opencode/ debe instalarse manualmente via Bash"
+    Install-Reasonix
   }
 }
 
@@ -152,8 +245,5 @@ switch ($choice) {
 Remove-Item -Recurse -Force $tmpDir
 
 Write-Host ""
-Write-Host "¡Listo! Lee los documentos para empezar:"
-Write-Host "  • CLAUDE.md (si instalaste Claude Code)"
-Write-Host "  • OPENCODE.md (si instalaste OpenCode)"
-Write-Host "  • REASONIX.md (si instalaste Reasonix)"
+Write-Host "🎉 ¡Listo para construir profesionalmente!"
 Write-Host ""
