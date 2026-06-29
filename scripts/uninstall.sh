@@ -41,6 +41,14 @@ if [ "$ALL" -eq 1 ]; then
 fi
 
 if [ "$BUILDER" -eq 1 ] && [ -d "./.builder" ]; then
+  echo ""
+  echo "⚠️  Confirmación: vas a eliminar .builder/ (discovery, PRD, arquitectura, mockup, auditoría)"
+  echo "   Esta acción es IRREVERSIBLE. Asegúrate de haber guardado lo importante."
+  read -p "   ¿Seguro que quieres continuar? [y/N]: " -r confirm
+  if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+    echo "Abortado."
+    exit 0
+  fi
   rm -rf "./.builder"; echo "🗑️  Eliminado: .builder/ (artefactos + memoria)"
 fi
 

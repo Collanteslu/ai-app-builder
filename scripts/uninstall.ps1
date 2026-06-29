@@ -64,7 +64,18 @@ if ($All) {
 
 if ($Builder) {
   $b = Join-Path (Get-Location) '.builder'
-  if (Test-Path $b) { Remove-Item -Recurse -Force $b; Write-Host "🗑️  Eliminado: .builder\ (artefactos + memoria)" }
+  if (Test-Path $b) {
+    Write-Host ""
+    Write-Host "⚠️  Confirmación: vas a eliminar .builder\ (discovery, PRD, arquitectura, mockup, auditoría)"
+    Write-Host "   Esta acción es IRREVERSIBLE. Asegúrate de haber guardado lo importante."
+    $confirm = Read-Host "   ¿Seguro que quieres continuar? [y/N]"
+    if ($confirm -ne 'y' -and $confirm -ne 'Y') {
+      Write-Host "Abortado."
+      exit 0
+    }
+    Remove-Item -Recurse -Force $b
+    Write-Host "🗑️  Eliminado: .builder\ (artefactos + memoria)"
+  }
 }
 
 Write-Host ""
