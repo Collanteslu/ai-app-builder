@@ -1,6 +1,7 @@
 # Base de datos de test AISLADA — puerto 5433 para no chocar con la de desarrollo
 # (5432). Los tests usan DATABASE_URL_TEST (.env.test), nunca DATABASE_URL.
-# Levanta con:  pnpm db:test:setup
+# Levanta con:  pnpm db:test:up
+# Baja con:     pnpm db:test:down
 services:
   postgres-test:
     image: postgres:17
