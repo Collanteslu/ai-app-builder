@@ -4,49 +4,6 @@
     ".opencode/instructions/convenciones.md",
     ".opencode/instructions/git-workflow.md"
   ],
-  "agents": {
-    "arquitecto": {
-      "path": ".opencode/agents/arquitecto.md",
-      "description": "Agente especializado en la Fase 3 (Arquitectura). Diseña modelo de datos, contrato de API y threat model. Solo lectura — no escribe código.",
-      "permissions": {
-        "read": true,
-        "write": {
-          "paths": [".builder/architecture.md", ".builder/progress.md", ".builder/memory/"]
-        },
-        "edit": false,
-        "bash": {
-          "allowed": ["cat", "rg", "ls", "node"]
-        },
-        "browser": false
-      }
-    },
-    "scaffolder": {
-      "path": ".opencode/agents/scaffolder.md",
-      "description": "Agente especializado en la Fase 5 (Scaffold). Genera código funcional a partir de PRD, arquitectura y mockups. Tiene acceso completo a write/edit.",
-      "permissions": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true,
-        "browser": true
-      }
-    },
-    "auditor": {
-      "path": ".opencode/agents/auditor.md",
-      "description": "Agente especializado en la Fase 6 (Auditoría). Verifica trazabilidad, wiring y calidad. Solo lectura — no modifica nada.",
-      "permissions": {
-        "read": true,
-        "write": {
-          "paths": [".builder/audit.md", ".builder/memory/"]
-        },
-        "edit": false,
-        "bash": {
-          "allowed": ["cat", "rg", "ls", "node", "npm", "pnpm"]
-        },
-        "browser": false
-      }
-    }
-  },
   "permission": {
     "skill": {
       "*": "allow"
