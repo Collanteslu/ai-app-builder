@@ -70,6 +70,30 @@ Cada requisito funcional lleva criterios de aceptación en formato Given/When/Th
   añade RNF de RGPD/seguridad obligatorios. No es opcional.
 - Marca prioridades para que el scaffold sepa qué construir primero.
 
+## Gate ejecutable de trazabilidad (duro)
+
+Igual que la Fase 6 no se cierra "de memoria", esta tampoco. El template incluye
+un linter de trazabilidad temprana, `scripts/trace-lint.mjs`, que coteja
+`discovery.md` ↔ `prd.md` ↔ `architecture.md` y devuelve **exit≠0** si hay un
+hueco CRÍTICO (un CU sin RF, un RF sin criterio de aceptación). Pégale la salida
+real, no la resumas.
+
+El template aún no se ha copiado (eso es la Fase 5), así que **localiza el script**
+en el constructor instalado, en este orden, y ejecútalo desde la raíz del
+proyecto (lee `.builder/` del directorio actual):
+
+```bash
+# Windows (PowerShell) — usa la primera ruta que exista:
+node .claude\template\scripts\trace-lint.mjs   # instalado en el proyecto
+# node template\scripts\trace-lint.mjs          # repo del constructor abierto (opencode)
+# node "$env:USERPROFILE\.claude\template\scripts\trace-lint.mjs"  # instalación global
+```
+
+Para esta fase, los críticos relevantes son `CU-SIN-RF` y `RF-SIN-CRITERIO`. Si
+exit≠0 por uno de ellos, **no cierres la fase**: ciérralo antes. (El crítico
+`RF-SIN-ARQUITECTURA` aún no aplica aquí —la arquitectura no existe— y el script
+lo ignora si falta `architecture.md`.)
+
 ## Definition of Done
 
 - [ ] Cada caso de uso del discovery tiene al menos un RF que lo cubre
@@ -77,5 +101,6 @@ Cada requisito funcional lleva criterios de aceptación en formato Given/When/Th
 - [ ] Hay RNF de seguridad/RGPD si el discovery marcó datos sensibles
 - [ ] Métricas de éxito cuantificadas
 - [ ] Objetivo en una sola frase clara
+- [ ] **`trace-lint.mjs` ejecutado con exit 0** (cero críticos de PRD); la salida real se anota en el handoff
 
 Cuando esté completo, guarda `prd.md` y devuelve el control al orquestador.

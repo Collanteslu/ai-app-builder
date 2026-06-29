@@ -455,7 +455,7 @@ añade al repo la skill correspondiente.)
 
 ## Estructura del proyecto
 
-Según `stack.md` (por defecto Next.js + NestJS + Prisma; o CI3 si es legacy):
+Según `stack.md` (por defecto Next.js App Router + API Routes + Prisma; o CI3 si es legacy):
 - Estructura de carpetas, configs, linter.
 - Esquema/migraciones que reflejan el modelo de datos de la arquitectura.
 - Capa de datos con seed (los datos de ejemplo de los mockups).

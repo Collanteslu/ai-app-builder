@@ -32,7 +32,7 @@ Fuente de todas: `~/.agents/skills/<skill>` (copia local; re-sincroniza con el s
 |-------|--------------------|-----------|
 | `accessibility-a11y` | 4, 5, 6 | WCAG y UI accesible |
 | `api-design-principles` | 3 | Diseño de API REST/GraphQL |
-| `api-development` | 5 | APIs con NestJS (TS) / Go |
+| `api-development` | 5 | Principios de API aplicados a Next.js API Routes (la skill cubre NestJS/Go; aquí se usa solo el criterio de diseño) |
 | `auth-implementation-patterns` | 3 | Patrones de auth (JWT, OAuth, sesiones, RBAC) |
 | `code-review-excellence` | 6 | Revisión de código |
 | `debugging-strategies` | 5 | Depuración sistemática / causa raíz |

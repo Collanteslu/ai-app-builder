@@ -4,6 +4,16 @@
 > como contexto. Cópialo a la raíz del proyecto y ajústalo antes de empezar.
 > Lo que no apliques, déjalo en blanco o bórralo.
 
+## Modo del proyecto
+
+- **Stack legacy (CI3)**: no
+  > Ponlo en `sí` solo si el proyecto es un CodeIgniter 3 existente (PHP/MySQL) al
+  > que se le añaden funcionalidades. Cuando está en `sí`, las Fases 3–5 se
+  > expresan en términos de CI3 (controladores/modelos/vistas, MySQL, query
+  > builder) y el mockup debe ser HTML/CSS portable, no React. La trazabilidad
+  > RF-XX **no cambia**; solo cambia la tecnología destino. En `no` (por defecto)
+  > se usa el stack moderno de abajo.
+
 ## Stack
 
 - **Frontend**: Next.js 16 (App Router) + TypeScript 6 + Tailwind CSS 4

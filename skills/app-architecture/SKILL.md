@@ -165,9 +165,29 @@ Aplícalas en la pieza que les toca (todas vienen incluidas en el repo):
 - **Seguridad / threat model**: `security-best-practices`, `security-review`.
 - **Operación**: `logging-best-practices` si el PRD pide trazas/auditoría.
 
+## Gate ejecutable de trazabilidad (duro)
+
+El hueco más caro de esta fase es un RF del PRD que nunca llega a la arquitectura:
+hoy no se ve hasta la auditoría de la Fase 6. El linter `scripts/trace-lint.mjs`
+del template lo caza ya, cotejando `prd.md` ↔ `architecture.md`. Localízalo igual
+que en la Fase 5 (el template aún no se copió) y ejecútalo desde la raíz:
+
+```bash
+# Windows (PowerShell) — primera ruta que exista:
+node .claude\template\scripts\trace-lint.mjs   # instalado en el proyecto
+# node template\scripts\trace-lint.mjs          # repo del constructor (opencode)
+# node "$env:USERPROFILE\.claude\template\scripts\trace-lint.mjs"  # global
+```
+
+Para esta fase, los críticos que **bloquean** son `RF-SIN-ARQUITECTURA` (un RF del
+PRD sin entidad/endpoint que lo soporte) y `RF-FANTASMA` (un RF en la arquitectura
+que no existe en el PRD — scope creep). Si exit≠0, cierra el hueco antes de pasar
+a la Fase 4. Pega la salida real en el handoff.
+
 ## Definition of Done
 
 - [ ] Cada RF del PRD aparece en la tabla de trazabilidad con su entidad y endpoint
+- [ ] **`trace-lint.mjs` ejecutado con exit 0** (cero `RF-SIN-ARQUITECTURA` ni `RF-FANTASMA`); salida real en el handoff
 - [ ] **IDs fijos**: cada entidad referenciada por el frontend tiene un ID seed documentado en el modelo
 - [ ] **Auth real**: los endpoints de NextAuth están especificados en el contrato de API (no login simulado)
 - [ ] **Test DB**: la BD de test (puerto 5433) está especificada con su docker-compose

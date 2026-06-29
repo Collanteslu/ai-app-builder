@@ -56,8 +56,8 @@ memoria todavía, continúa: se irá creando con el primer `capture`.
 |------|-------|-------|------|-------------------|
 | 0 *(opc.)* | app-brainstorm | idea difusa | brief.md | idea en una frase + problema real + confirmada por el usuario |
 | 1 | app-discovery | idea/brief.md + stack.md | discovery.md | problema, usuario y casos de uso definidos |
-| 2 | app-prd | discovery.md | prd.md | todos los requisitos con ID y criterios de aceptación |
-| 3 | app-architecture | prd.md + stack.md | architecture.md | modelo de datos + contrato API + threat model si hay datos sensibles |
+| 2 | app-prd | discovery.md | prd.md | todos los requisitos con ID y criterios de aceptación + `trace-lint.mjs` exit 0 (CU-SIN-RF, RF-SIN-CRITERIO) |
+| 3 | app-architecture | prd.md + stack.md | architecture.md | modelo de datos + contrato API + threat model si hay datos sensibles + `trace-lint.mjs` exit 0 (RF-SIN-ARQUITECTURA, RF-FANTASMA) |
 | 4 | app-mockup | prd.md | design-system.md + mockup/ | sistema de diseño definido + un mockup por flujo dentro del shell |
 | 5 | app-scaffold | todo lo anterior | código + tests | slices de prioridad alta en verde (aceptación + unit) y suite verde en el handoff |
 | 6 | app-audit | todo | audit.md | `pnpm audit:builder` con **exit 0** (cero CRÍTICOS) + cero huecos críticos de trazabilidad |
@@ -67,6 +67,14 @@ artefacto de la fase anterior existe y está completo (no vacío, sin secciones
 marcadas como TODO). Si falta algo, vuelve a esa fase antes de avanzar. Esto
 es lo que evita el "salto silencioso" donde se olvida algo.
 
+**`audit:builder` se ejecuta DOS veces, a propósito (no es redundancia).** En la
+Fase 5 lo corre el *scaffold* como **auto-comprobación** antes del handoff: no se
+entrega código con críticos. En la Fase 6 lo **re-ejecuta** la *auditoría* como
+**gate de cierre independiente**, junto con su lectura manual (login simulado,
+seed IDs, etc.). Es defensa en profundidad: la F5 evita entregar roto, la F6 es la
+red que no se fía. Si la F6 encuentra un crítico, el proceso vuelve a la F5. Lo
+mismo aplica a `trace-lint.mjs` en las Fases 2 y 3 (cada fase lo corre al cerrar).
+
 ## Gate de stack (duro, antes de la Fase 1)
 
 Confirma que existe `stack.md` y que está **resuelto**, no solo presente. No
@@ -74,7 +82,8 @@ basta con que el fichero exista: revisa explícitamente que
 
 - **no queda ningún `(definir...)`** sin resolver (sobre todo en **Auth** e **Infra**),
 - los campos de **Restricciones de negocio** están contestados (sí/no, no en blanco),
-- si el proyecto es legacy, la bandera de stack legacy (CI3) está marcada.
+- la bandera **Stack legacy (CI3)** está resuelta (`sí`/`no`, no en blanco); si
+  es `sí`, las Fases 3–5 trabajan en términos de CI3 (ver `stack.md`).
 
 Si queda algún placeholder o campo vacío, **párate aquí**: ayuda al usuario a
 resolverlo antes de la Fase 1. Un `stack.md` con `(definir)` revienta la Fase 3.
