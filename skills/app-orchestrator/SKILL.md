@@ -97,8 +97,11 @@ resolverlo antes de la Fase 1. Un `stack.md` con `(definir)` revienta la Fase 3.
    idea clara, sáltala y ve directo a Discovery. Esta Fase 0 es el brainstorming
    propio del proceso: sustituye a cualquier skill genérica de ideación.
 3. Anuncia siempre en qué fase estás y qué vas a producir.
-4. Invoca la skill de la fase (cada fase tiene su propia skill: app-brainstorm,
+4. **Invoca la skill de la fase** (cada fase tiene su propia skill: app-brainstorm,
    app-discovery, app-prd, etc.). Sigue sus instrucciones.
+   - **Fase 3 (Arquitectura)**: Carga el agente especializado `/load arquitecto` (o equivalente de OpenCode). El arquitecto genera architecture.md con autoridad sobre decisiones de diseño.
+   - **Fase 5 (Scaffold)**: Carga el agente especializado `/load scaffolder`. El scaffolder genera código con acceso completo (write, edit, bash, browser).
+   - **Fase 6 (Auditoría)**: Carga el agente especializado `/load auditor`. El auditor verifica trazabilidad y calidad con permisos de lectura (no modifica código).
 5. **Captura en memoria lo que aprendas** (skill `app-memory`). Durante la fase,
    cuando tomes una decisión no obvia, resuelvas un bug que pueda volver, o
    descubras una restricción o rareza del stack, escríbelo en `.builder/memory/`

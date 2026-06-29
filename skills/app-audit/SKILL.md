@@ -9,11 +9,25 @@ Objetivo: cazar lo que se haya colado. Esta es la red de seguridad del proceso:
 recorre todos los artefactos y verifica que cada cosa enlaza con la siguiente.
 Lo que no se mapea, se ha olvidado.
 
+## Agente especializado
+
+Esta fase es conducida por el agente **auditor** (especificado en opencode.json).
+El auditor tiene permisos de lectura (no modifica código, solo genera `audit.md`
+y captura en memoria). Antes de empezar a auditar:
+
+**Recall de memoria.** Si existe `.builder/memory/MEMORY.md`, ejecuta recall con la
+skill `app-memory`. Lee especialmente las memorias de tipo `gotcha`, `constraint` y
+`decision` con `refs` a los RF-XX. Los gotchas indican dónde han fallado las pruebas
+o han aparecido rareza del stack; la auditoría ha de verificar esos puntos específicos
+con atención extra. Las restricciones (business, técnicas) te dicen qué verificar
+que se respeta en el código final.
+
 ## Qué lees
 
 Todos los artefactos de `.builder/`: `discovery.md`, `prd.md`,
 `architecture.md`, `mockup/`, y el código generado (busca los comentarios de
-trazabilidad `RF-XX`).
+trazabilidad `RF-XX`). Lee también `.builder/memory/MEMORY.md` para entender qué
+gotchas han plagado el scaffold, de forma que los audites con especial rigor.
 
 ## Comprobaciones de trazabilidad
 

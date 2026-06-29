@@ -11,7 +11,9 @@ se alimentan entre sí: modelo de datos, contrato de API y seguridad.
 
 ## Antes de empezar (gate de entrada)
 
-Lee `prd.md` y `stack.md`. Si el PRD no existe o tiene requisitos sin ID, no
+**1. Recall de memoria.** Si existe `.builder/memory/MEMORY.md`, ejecuta recall con la skill `app-memory`. Lee especialmente las memorias de tipo `constraint`, `context` y `decision` con `refs` a los RF-XX que vas a tocar. Esto evita re-litigar arquitecturas previas y re-introducir gotchas ya documentados.
+
+**2. Lee `prd.md` y `stack.md`.** Si el PRD no existe o tiene requisitos sin ID, no
 continúes: vuelve a la Fase 2. Cada decisión de arquitectura debe poder rastrearse
 a un RF-XX o RNF-XX.
 
@@ -20,6 +22,19 @@ arquitectura se expresa en sus términos (controladores/modelos/vistas de
 CodeIgniter 3, MySQL, query builder) en vez de Prisma/NestJS, y el contrato de
 API puede ser de rutas CI3 clásicas. El modelo de trazabilidad RF-XX no cambia;
 solo cambia la tecnología destino.
+
+## Agente especializado
+
+Esta fase es conducida por el agente **arquitecto** (especificado en opencode.json).
+El arquitecto tiene permisos limitados: puede leer artefactos, escribir en
+`architecture.md` y capturar decisiones en memoria, pero NO modifica código. Esto
+asegura que el diseño es puro (no contaminado por detalles de implementación).
+
+Cuando el agente arquitecto descubre una decisión no obvia (por qué A y no B, en qué
+se diferencia del stack por defecto, cuál es la consecuencia de esta elección),
+ejecuta `capture` con la skill `app-memory`, enlazando la decisión a los RF/RNF que
+toca. Esto construye la memoria de arquitectura que la Fase 5 usa para evitar
+decisiones contradictorias.
 
 ## Qué produces
 
