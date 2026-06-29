@@ -67,7 +67,7 @@ if ($confirm -ne "s") { Write-Host "Abortado."; exit 0 }
 # Descargar constructor
 # ──────────────────────────────────────────────────────────────────────────
 
-$tmpDir = New-TemporaryFile -AsContainer
+$tmpDir = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "reasonix-$(Get-Random)") -Force
 
 Write-Host ""
 Write-Host "⤓ Descargando constructor..."

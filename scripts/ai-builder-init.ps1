@@ -55,7 +55,7 @@ if ($choice -notin @("1", "2", "3", "4")) {
 # Descargar los instaladores desde el repo
 # ──────────────────────────────────────────────────────────────────────────
 
-$tmpDir = New-TemporaryFile -AsContainer
+$tmpDir = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "ai-builder-$(Get-Random)") -Force
 $baseUrl = "https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2"
 
 Write-Host ""
@@ -75,7 +75,7 @@ $opencodeScript = @"
 `$branch = "v2"
 
 # Seguir con install.sh (convertido a PS)
-`$tmpDir = New-TemporaryFile -AsContainer
+`$tmpDir = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "ai-builder-$(Get-Random)") -Force
 git clone --depth 1 --branch `$branch `$repoUrl `$tmpDir -q
 
 # ... resto del bootstrap pero solo instalando OpenCode
