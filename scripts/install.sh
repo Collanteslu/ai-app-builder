@@ -1,57 +1,117 @@
 #!/usr/bin/env bash
-# install.sh — instala las skills del AI App Builder en Claude Code.
+# install.sh — instalador inteligente para AI App Builder (macOS / Linux)
 #
 # Uso:
-#   scripts/install.sh                # a nivel de usuario (~/.claude/skills)
-#   scripts/install.sh --project      # a nivel de proyecto (.claude/skills del cwd)
-#   scripts/install.sh --dest /ruta   # destino explícito
+#   curl -fsSL https://raw.githubusercontent.com/.../install.sh | bash
 #
-# Copia las 8 skills de orquestación + las de conocimiento, y deja una copia de
-# config/stack.md y config/model-profiles.md en el cwd como punto de partida.
+# Estrategia:
+#   1. Pregunta qué plataforma: Claude Code (1), OpenCode (2), Ambas (3)
+#   2. NO instala nada por defecto
+#   3. Según la respuesta, copia a .claude/ o .opencode/
+#   4. Si Ambas: crea symlinks para evitar duplicación
+#
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEST="$HOME/.claude/skills"
-PROJECT=0   # 1 = instalación de proyecto (copia .opencode + opencode.json al cwd)
+PROJ="$(pwd)"
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --project) DEST="$(pwd)/.claude/skills"; PROJECT=1; shift;;
-    --dest)    DEST="$2"; shift 2;;
-    -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0;;
-    *) echo "Opción desconocida: $1" >&2; exit 1;;
-  esac
-done
+# ──────────────────────────────────────────────────────────────────────────
+# Verificaciones previas
+# ──────────────────────────────────────────────────────────────────────────
 
-echo "Instalando skills desde: $REPO/skills"
-echo "Destino:                 $DEST"
-mkdir -p "$DEST"
-cp -R "$REPO/skills/"* "$DEST/"
+if ! command -v git &> /dev/null; then
+  echo "❌ git no está instalado. Instálalo primero."
+  exit 1
+fi
 
-count=$(find "$REPO/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-echo "✅ $count skills instaladas."
+# ──────────────────────────────────────────────────────────────────────────
+# Preguntar plataforma (SIN INSTALAR POR DEFECTO)
+# ──────────────────────────────────────────────────────────────────────────
 
-# Template (scaffold base de Fase 5) junto a las skills, excluyendo node_modules/.next
-TPL_DEST="$(dirname "$DEST")/template"
-rm -rf "$TPL_DEST"
-mkdir -p "$TPL_DEST"
-find "$REPO/template" -maxdepth 1 -mindepth 1 ! -name node_modules ! -name .next \
-  -exec cp -R {} "$TPL_DEST/" \;
-echo "✅ template instalado en $TPL_DEST"
+echo ""
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║         AI App Builder — Selector de plataforma               ║"
+echo "╚════════════════════════════════════════════════════════════════╝"
+echo ""
+echo "¿Con cuál plataforma usarás el AI App Builder?"
+echo ""
+echo "  1) Claude Code (CLI / Desktop / Web app)"
+echo "  2) OpenCode"
+echo "  3) Ambas"
+echo ""
+read -p "Opción (1-3): " platform_choice
 
-# ── Configuración por plataforma (solo instalación de proyecto) ────────────────
-if [ "$PROJECT" -eq 1 ]; then
+case "$platform_choice" in
+  1|2|3) ;;
+  *)
+    echo "❌ Opción inválida. Debe ser 1, 2 o 3."
+    exit 1
+    ;;
+esac
+
+# ──────────────────────────────────────────────────────────────────────────
+# Helpers para symlinks seguros
+# ──────────────────────────────────────────────────────────────────────────
+
+safe_symlink() {
+  local target="$1"
+  local link="$2"
+
+  # Si el link existe y es symlink, verificar que apunta a lo correcto
+  if [ -L "$link" ]; then
+    local current=$(readlink "$link")
+    if [ "$current" = "$target" ]; then
+      echo "  ℹ️  symlink ya existe: $link → $target"
+      return 0
+    else
+      echo "  ⚠️  symlink existente apunta a otro lado, reemplazando..."
+      rm "$link"
+    fi
+  fi
+
+  # Si existe como directorio, borrar y crear symlink
+  if [ -d "$link" ] && [ ! -L "$link" ]; then
+    echo "  🗑️  directorio existente, reemplazando con symlink..."
+    rm -rf "$link"
+  fi
+
+  # Crear symlink
+  ln -s "$target" "$link"
+  echo "  ✅ symlink creado: $link → $target"
+}
+
+# ──────────────────────────────────────────────────────────────────────────
+# OPCIÓN 1: Claude Code
+# ──────────────────────────────────────────────────────────────────────────
+
+install_claude_code() {
   echo ""
-  echo "¿Con cuál plataforma usarás el AI App Builder?"
-  echo "  1) Claude Code (CLI / Desktop / Web app)"
-  echo "  2) OpenCode"
-  echo "  3) Ambas"
-  read -p "Opción (1-3): " platform_choice
+  echo "📦 Instalando para Claude Code..."
+  echo ""
 
-  # Claude Code: crear/copiar CLAUDE.md
-  if [ "$platform_choice" = "1" ] || [ "$platform_choice" = "3" ]; then
-    if [ ! -f ./CLAUDE.md ]; then
-      cat > ./CLAUDE.md << 'EOF'
+  # Crear .claude si no existe
+  mkdir -p "$PROJ/.claude"
+
+  # Instalar skills
+  echo "  • Instalando skills..."
+  rm -rf "$PROJ/.claude/skills"
+  mkdir -p "$PROJ/.claude/skills"
+  cp -R "$REPO/skills"/* "$PROJ/.claude/skills/"
+  count=$(find "$REPO/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+  echo "    ✅ $count skills instaladas"
+
+  # Instalar template
+  echo "  • Instalando template..."
+  rm -rf "$PROJ/.claude/template"
+  mkdir -p "$PROJ/.claude/template"
+  find "$REPO/template" -maxdepth 1 -mindepth 1 \
+    ! -name "node_modules" ! -name ".next" \
+    -exec cp -R {} "$PROJ/.claude/template/" \;
+  echo "    ✅ template instalado"
+
+  # Crear CLAUDE.md (NO sobrescribir si existe)
+  if [ ! -f "$PROJ/CLAUDE.md" ]; then
+    cp "$REPO/CLAUDE.md" "$PROJ/CLAUDE.md" 2>/dev/null || cat > "$PROJ/CLAUDE.md" << 'EOF'
 # Instrucciones para Claude Code
 
 Este proyecto usa el **AI App Builder** — un proceso estructurado de 6 fases
@@ -59,11 +119,13 @@ para construir aplicaciones con trazabilidad de requisitos (RF-XX).
 
 ## Flujo principal
 
+Abre Claude Code en esta carpeta y escribe:
+
 ```
 Quiero crear una aplicación para [tu idea]
 ```
 
-O la frase inequívoca si los agentes no se cargan:
+O la frase inequívoca:
 
 ```
 inicia el constructor de apps
@@ -71,61 +133,125 @@ inicia el constructor de apps
 
 ## Roles de Claude por fase
 
-**Nota:** Claude Code NO tiene agentes formales (eso es OpenCode).
-En cada fase, Claude juega un rol especializado:
+Claude Code NO tiene agentes formales. En cada fase, yo juego un rol:
 
-1. **Discovery** → Claude es descubridor (extrae CU-XX del análisis)
-2. **PRD** → Claude es analista (define RF-XX con criterios de aceptación)
-3. **Arquitectura** → Claude es **arquitecto** (diseña SDD, NO escribe código)
-4. **Mockup** → Claude es diseñador (crea mockups navegables HTML)
-5. **Scaffold** → Claude es **scaffolder** (genera código + tests con TDD triple bucle)
-6. **Auditoría** → Claude es **auditor** (verifica trazabilidad, NO modifica código)
+1. **Discovery** → descubridor (extrae CU-XX)
+2. **PRD** → analista (define RF-XX con criterios)
+3. **Arquitectura** → arquitecto (diseño SDD, NO código)
+4. **Mockup** → diseñador (mockups navegables)
+5. **Scaffold** → scaffolder (código + tests TDD)
+6. **Auditoría** → auditor (verifico, NO modifico)
 
-## Gates
+## Gates ejecutables
 
-- `trace-lint.mjs`: ejecutable en Fase 2 y 3 (verifica trazabilidad de requisitos)
-- `audit:builder`: ejecutable en Fase 5 y 6 (verifica wiring y calidad)
-- `audit:wiring`: ejecutable en Fase 5 (verifica fetch → endpoint)
+- `pnpm trace:builder` — verifica trazabilidad (F2, F3)
+- `pnpm audit:builder` — verifica wiring y calidad (F5, F6)
+- `pnpm audit:wiring` — verifica fetch → endpoint (F5)
 
-Todos los gates deben pasar (exit 0) para avanzar.
-
-## Memoria persistente
-
-El proceso captura en `.builder/memory/` las decisiones, gotchas y restricciones
-que aparecen en cada fase. Esto evita repetir errores y re-litigar decisiones
-ya tomadas en sesiones anteriores.
+Todos deben pasar (exit 0) antes de avanzar.
 
 ## Configuración
 
-Edita `stack.md` antes de empezar (define tu tech stack, Auth, Infra).
+Edita `stack.md` antes de empezar (define tech stack, Auth, Infra).
 
 ---
 
 Para más detalles: `.claude/skills/app-orchestrator/SKILL.md`
 EOF
-      echo "✅ CLAUDE.md creado (instrucciones para Claude Code)"
-    fi
+    echo "    ✅ CLAUDE.md creado"
+  else
+    echo "    ℹ️  CLAUDE.md ya existe, no se sobrescribió"
   fi
 
-  # OpenCode: configurar .opencode + opencode.json
-  if [ "$platform_choice" = "2" ] || [ "$platform_choice" = "3" ]; then
-    rm -rf "$(pwd)/.opencode"
-    mkdir -p "$(pwd)/.opencode"
-    find "$REPO/.opencode" -maxdepth 1 -mindepth 1 ! -name node_modules \
-      -exec cp -R {} "$(pwd)/.opencode/" \;
-    cp "$REPO/opencode.json" "$(pwd)/opencode.json"
-    echo "✅ .opencode + opencode.json instalados (soporte OpenCode)"
+  # Copiar stack.md y model-profiles.md si no existen
+  for f in stack.md model-profiles.md; do
+    if [ ! -f "$PROJ/$f" ] && [ -f "$REPO/config/$f" ]; then
+      cp "$REPO/config/$f" "$PROJ/$f"
+      echo "    📄 $f copiado"
+    fi
+  done
 
-    # Crear OPENCODE.md con instrucciones específicas
-    if [ ! -f ./OPENCODE.md ]; then
-      cat > ./OPENCODE.md << 'EOF'
+  # git init si no existe
+  if [ ! -d "$PROJ/.git" ]; then
+    cd "$PROJ"
+    git init -q
+    echo "    🔧 git init"
+  fi
+
+  echo ""
+  echo "✅ Instalación completada para Claude Code"
+  echo ""
+  echo "Próximos pasos:"
+  echo "  1. Edita stack.md (define tu tech stack, Auth, Infra)"
+  echo "  2. Abre Claude Code en esta carpeta"
+  echo "  3. Escribe: 'Quiero crear una aplicación para [tu idea]'"
+}
+
+# ──────────────────────────────────────────────────────────────────────────
+# OPCIÓN 2: OpenCode
+# ──────────────────────────────────────────────────────────────────────────
+
+install_opencode() {
+  echo ""
+  echo "📦 Instalando para OpenCode..."
+  echo ""
+
+  # Crear .opencode si no existe
+  mkdir -p "$PROJ/.opencode"
+
+  # Instalar agentes
+  echo "  • Instalando agentes..."
+  rm -rf "$PROJ/.opencode/agents"
+  cp -R "$REPO/.opencode/agents" "$PROJ/.opencode/"
+  echo "    ✅ agentes instalados"
+
+  # Instalar instructions
+  echo "  • Instalando instrucciones..."
+  rm -rf "$PROJ/.opencode/instructions"
+  cp -R "$REPO/.opencode/instructions" "$PROJ/.opencode/"
+  echo "    ✅ instrucciones instaladas"
+
+  # Instalar commands
+  echo "  • Instalando comandos..."
+  rm -rf "$PROJ/.opencode/commands"
+  cp -R "$REPO/.opencode/commands" "$PROJ/.opencode/"
+  echo "    ✅ comandos instalados"
+
+  # Instalar skills
+  echo "  • Instalando skills..."
+  rm -rf "$PROJ/.opencode/skills"
+  mkdir -p "$PROJ/.opencode/skills"
+  cp -R "$REPO/skills"/* "$PROJ/.opencode/skills/"
+  count=$(find "$REPO/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+  echo "    ✅ $count skills instaladas"
+
+  # Instalar template
+  echo "  • Instalando template..."
+  rm -rf "$PROJ/.opencode/template"
+  mkdir -p "$PROJ/.opencode/template"
+  find "$REPO/template" -maxdepth 1 -mindepth 1 \
+    ! -name "node_modules" ! -name ".next" \
+    -exec cp -R {} "$PROJ/.opencode/template/" \;
+  echo "    ✅ template instalado"
+
+  # Copiar opencode.json (NO sobrescribir si existe)
+  if [ ! -f "$PROJ/opencode.json" ]; then
+    cp "$REPO/opencode.json" "$PROJ/opencode.json"
+    echo "    ✅ opencode.json copiado"
+  else
+    echo "    ℹ️  opencode.json ya existe, no se sobrescribió"
+  fi
+
+  # Crear OPENCODE.md (NO sobrescribir si existe)
+  if [ ! -f "$PROJ/OPENCODE.md" ]; then
+    cat > "$PROJ/OPENCODE.md" << 'EOF'
 # Instrucciones para OpenCode
 
 Este proyecto usa el **AI App Builder** en OpenCode.
 
 ## Agentes especializados
 
-El proceso usa 3 agentes con permisos limitados:
+OpenCode tiene 3 agentes formales con permisos limitados:
 
 1. **arquitecto** (Fase 3): diseña SDD, read-only en código
    ```
@@ -148,9 +274,11 @@ El proceso usa 3 agentes con permisos limitados:
 /build-app quiero crear una aplicación para [tu idea]
 ```
 
-## Skills incluidas
+## Gates ejecutables
 
-Todas las skills están en `.opencode/` — llama `/help` para listarlas.
+- `pnpm trace:builder` — verifica trazabilidad (F2, F3)
+- `pnpm audit:builder` — verifica wiring y calidad (F5, F6)
+- `pnpm audit:wiring` — verifica fetch → endpoint (F5)
 
 ## Configuración
 
@@ -158,29 +286,200 @@ Edita `stack.md` antes de empezar (define tech stack, Auth, Infra).
 
 ---
 
-Para más detalles: `.opencode/skills/app-orchestrator/SKILL.md`
+Para más detalles: `.opencode/instructions/` y `.opencode/skills/app-orchestrator/SKILL.md`
 EOF
-      echo "✅ OPENCODE.md creado (instrucciones para OpenCode)"
-    fi
+    echo "    ✅ OPENCODE.md creado"
+  else
+    echo "    ℹ️  OPENCODE.md ya existe, no se sobrescribió"
   fi
 
-  # Config general
+  # Copiar stack.md y model-profiles.md si no existen
   for f in stack.md model-profiles.md; do
-    if [ ! -f "./$f" ] && [ -f "$REPO/config/$f" ]; then
-      cp "$REPO/config/$f" "./$f"
-      echo "📄 Copiado config/$f → ./$f (ajústalo antes de empezar)."
+    if [ ! -f "$PROJ/$f" ] && [ -f "$REPO/config/$f" ]; then
+      cp "$REPO/config/$f" "$PROJ/$f"
+      echo "    📄 $f copiado"
     fi
   done
 
-  echo ""
-  if [ "$platform_choice" = "1" ]; then
-    echo "✅ Listo. Lee CLAUDE.md y abre Claude Code en esta carpeta."
-  elif [ "$platform_choice" = "2" ]; then
-    echo "✅ Listo. Lee OPENCODE.md y usa OpenCode en esta carpeta."
-  else
-    echo "✅ Listo. Lee CLAUDE.md u OPENCODE.md según tu plataforma."
+  # git init si no existe
+  if [ ! -d "$PROJ/.git" ]; then
+    cd "$PROJ"
+    git init -q
+    echo "    🔧 git init"
   fi
-fi
+
+  echo ""
+  echo "✅ Instalación completada para OpenCode"
+  echo ""
+  echo "Próximos pasos:"
+  echo "  1. Edita stack.md (define tu tech stack, Auth, Infra)"
+  echo "  2. Abre OpenCode en esta carpeta"
+  echo "  3. Escribe: '/build-app quiero crear una aplicación para [tu idea]'"
+}
+
+# ──────────────────────────────────────────────────────────────────────────
+# OPCIÓN 3: Ambas (Claude Code + OpenCode con symlinks)
+# ──────────────────────────────────────────────────────────────────────────
+
+install_both() {
+  echo ""
+  echo "📦 Instalando para Claude Code + OpenCode (con symlinks)..."
+  echo ""
+
+  # Primero, instalar en .claude/ (como principal)
+  echo "  • Instalando en .claude/ (principal)..."
+  mkdir -p "$PROJ/.claude"
+
+  # Instalar skills en .claude/
+  rm -rf "$PROJ/.claude/skills"
+  mkdir -p "$PROJ/.claude/skills"
+  cp -R "$REPO/skills"/* "$PROJ/.claude/skills/"
+  count=$(find "$REPO/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+  echo "    ✅ $count skills en .claude/skills"
+
+  # Instalar template en .claude/
+  rm -rf "$PROJ/.claude/template"
+  mkdir -p "$PROJ/.claude/template"
+  find "$REPO/template" -maxdepth 1 -mindepth 1 \
+    ! -name "node_modules" ! -name ".next" \
+    -exec cp -R {} "$PROJ/.claude/template/" \;
+  echo "    ✅ template en .claude/template"
+
+  # Ahora instalar OpenCode (agentes, instructions, commands)
+  echo "  • Instalando en .opencode/ (agentes + instrucciones)..."
+  mkdir -p "$PROJ/.opencode"
+
+  rm -rf "$PROJ/.opencode/agents"
+  cp -R "$REPO/.opencode/agents" "$PROJ/.opencode/"
+  echo "    ✅ agentes instalados"
+
+  rm -rf "$PROJ/.opencode/instructions"
+  cp -R "$REPO/.opencode/instructions" "$PROJ/.opencode/"
+  echo "    ✅ instrucciones instaladas"
+
+  rm -rf "$PROJ/.opencode/commands"
+  cp -R "$REPO/.opencode/commands" "$PROJ/.opencode/"
+  echo "    ✅ comandos instalados"
+
+  # Crear symlinks desde .opencode/ hacia .claude/
+  echo "  • Creando symlinks (sin duplicación de skills/template)..."
+  safe_symlink "../.claude/skills" "$PROJ/.opencode/skills"
+  safe_symlink "../.claude/template" "$PROJ/.opencode/template"
+
+  # Copiar opencode.json
+  if [ ! -f "$PROJ/opencode.json" ]; then
+    cp "$REPO/opencode.json" "$PROJ/opencode.json"
+    echo "    ✅ opencode.json copiado"
+  else
+    echo "    ℹ️  opencode.json ya existe, no se sobrescribió"
+  fi
+
+  # Crear CLAUDE.md y OPENCODE.md
+  if [ ! -f "$PROJ/CLAUDE.md" ]; then
+    cat > "$PROJ/CLAUDE.md" << 'EOF'
+# Instrucciones para Claude Code
+
+Este proyecto soporta AMBAS plataformas: Claude Code y OpenCode.
+
+## Para Claude Code
+
+Abre Claude Code en esta carpeta y escribe:
+
+```
+Quiero crear una aplicación para [tu idea]
+```
+
+Los skills están en `.claude/skills/`.
+
+## Roles de Claude
+
+En cada fase, yo juego un rol:
+- Fase 3: arquitecto (diseño SDD, sin código)
+- Fase 5: scaffolder (código + tests TDD)
+- Fase 6: auditor (verifico, sin modificar)
+
+## Configuración
+
+Edita `stack.md` antes de empezar.
+
+---
+
+Para más detalles: `.claude/skills/app-orchestrator/SKILL.md`
+EOF
+    echo "    ✅ CLAUDE.md creado"
+  else
+    echo "    ℹ️  CLAUDE.md ya existe"
+  fi
+
+  if [ ! -f "$PROJ/OPENCODE.md" ]; then
+    cat > "$PROJ/OPENCODE.md" << 'EOF'
+# Instrucciones para OpenCode
+
+Este proyecto soporta AMBAS plataformas: Claude Code y OpenCode.
+
+## Para OpenCode
+
+Abre OpenCode en esta carpeta y escribe:
+
+```
+/build-app quiero crear una aplicación para [tu idea]
+```
+
+Los agentes están en `.opencode/agents/` y los skills en `.opencode/skills/` (symlink a `.claude/skills/`).
+
+## Agentes
+
+- `/load arquitecto` (Fase 3)
+- `/load scaffolder` (Fase 5)
+- `/load auditor` (Fase 6)
+
+## Configuración
+
+Edita `stack.md` antes de empezar.
+
+---
+
+Para más detalles: `.opencode/skills/app-orchestrator/SKILL.md`
+EOF
+    echo "    ✅ OPENCODE.md creado"
+  else
+    echo "    ℹ️  OPENCODE.md ya existe"
+  fi
+
+  # Copiar stack.md y model-profiles.md
+  for f in stack.md model-profiles.md; do
+    if [ ! -f "$PROJ/$f" ] && [ -f "$REPO/config/$f" ]; then
+      cp "$REPO/config/$f" "$PROJ/$f"
+      echo "    📄 $f copiado"
+    fi
+  done
+
+  # git init
+  if [ ! -d "$PROJ/.git" ]; then
+    cd "$PROJ"
+    git init -q
+    echo "    🔧 git init"
+  fi
+
+  echo ""
+  echo "✅ Instalación completada para Claude Code + OpenCode"
+  echo ""
+  echo "Próximos pasos:"
+  echo "  1. Edita stack.md"
+  echo "  2. Para Claude Code: abre Claude Code y escribe tu idea"
+  echo "  3. Para OpenCode: abre OpenCode y escribe: /build-app [tu idea]"
+}
+
+# ──────────────────────────────────────────────────────────────────────────
+# Ejecutar según opción
+# ──────────────────────────────────────────────────────────────────────────
+
+case "$platform_choice" in
+  1) install_claude_code ;;
+  2) install_opencode ;;
+  3) install_both ;;
+esac
 
 echo ""
-echo "💡 Próximo paso: edita stack.md (define tu tech stack, Auth, Infra)."
+echo "💡 Recuerda: edita stack.md para definir tu configuración técnica."
+echo ""
