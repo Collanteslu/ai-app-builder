@@ -486,9 +486,28 @@ Cada archivo que implementa un requisito lleva en cabecera:
 // Ver: .builder/architecture.md §4
 ```
 
-## Definition of Done
+## Definition of Done: BLOQUEANTES vs MEJORAS
 
-No cierres la fase hasta que TODO esto sea cierto:
+**BLOQUEANTE** (must-have para pasar a Fase 6): cierra Fase 5 solo si estos 6 items están ✓:
+1. `pnpm audit:builder` **exit 0** (zero CRÍTICOS)
+2. WIRING CHECK OK (cada fetch() tiene route.ts)
+3. ZERO INLINE DATA (ningún array mock en páginas)
+4. AUTH REAL (NextAuth con session, no simulado)
+5. TEST DB AISLADA (DATABASE_URL_TEST, no DATABASE_URL)
+6. Cada RF de prioridad alta funciona de punta a punta
+
+**MEJORA** (aviso, no bloquea): reporta en el handoff pero permiten cerrar Fase 5:
+- E2E del flujo principal (puede estar incompleto)
+- Cobertura de tests >= 5 por entidad (puede ser < 5)
+- README con instrucciones (puede estar incompleto)
+- Seed documentation
+
+Si los 6 bloqueantes están verdes, Fase 5 cierra. Los avisos se listan en el handoff
+para que la Fase 6 audite (y repor) pero no detienen el progreso.
+
+---
+
+No cierres la fase hasta que al menos ESTOS bloqueantes sean ciertos:
 
 - [ ] **`pnpm audit:builder` con exit 0** antes del handoff (gate mecánico: cero CRÍTICOS — datos inline, fetch sin endpoint). Si falla, ciérralo antes de devolver el control.
 - [ ] **WIRING CHECK OK**: cada `fetch('/api/...')` en páginas tiene un archivo `route.ts` existente. Verificado con grep + glob.

@@ -52,15 +52,15 @@ en la que vas a entrar (por `phase` y por los `refs` que vas a tocar). Esto evit
 re-litigar decisiones ya tomadas y re-introducir bugs ya documentados. Si no hay
 memoria todavía, continúa: se irá creando con el primer `capture`.
 
-| Fase | Skill | Entra | Sale | Gate para avanzar |
-|------|-------|-------|------|-------------------|
-| 0 *(opc.)* | app-brainstorm | idea difusa | brief.md | idea en una frase + problema real + confirmada por el usuario |
-| 1 | app-discovery | idea/brief.md + stack.md | discovery.md | problema, usuario y casos de uso definidos |
-| 2 | app-prd | discovery.md | prd.md | todos los requisitos con ID y criterios de aceptación + `trace-lint.mjs` exit 0 (CU-SIN-RF, RF-SIN-CRITERIO) |
-| 3 | app-architecture | prd.md + stack.md | architecture.md | modelo de datos + contrato API + threat model si hay datos sensibles + `trace-lint.mjs` exit 0 (RF-SIN-ARQUITECTURA, RF-FANTASMA) |
-| 4 | app-mockup | prd.md | design-system.md + mockup/ | sistema de diseño definido + un mockup por flujo dentro del shell |
-| 5 | app-scaffold | todo lo anterior | código + tests | slices de prioridad alta en verde (aceptación + unit) y suite verde en el handoff |
-| 6 | app-audit | todo | audit.md | `pnpm audit:builder` con **exit 0** (cero CRÍTICOS) + cero huecos críticos de trazabilidad |
+| Fase | Agente | Skill | Entra | Sale | Gate para avanzar |
+|------|--------|-------|-------|------|-------------------|
+| 0 *(opc.)* | — | app-brainstorm | idea difusa | brief.md | idea en una frase + problema real + confirmada por el usuario |
+| 1 | — | app-discovery | idea/brief.md + stack.md | discovery.md | problema, usuario y casos de uso definidos |
+| 2 | — | app-prd | discovery.md | prd.md | todos los requisitos con ID y criterios de aceptación + `trace-lint.mjs` exit 0 (CU-SIN-RF, RF-SIN-CRITERIO) |
+| 3 | **arquitecto** | app-architecture | prd.md + stack.md | architecture.md | modelo de datos + contrato API + threat model si hay datos sensibles + `trace-lint.mjs` exit 0 (RF-SIN-ARQUITECTURA, RF-FANTASMA) |
+| 4 | — | app-mockup | prd.md | design-system.md + mockup/ | sistema de diseño definido + un mockup por flujo dentro del shell |
+| 5 | **scaffolder** | app-scaffold | todo lo anterior | código + tests | **BLOQUEANTES**: audit:builder exit 0 + wiring OK + zero inline + auth real + test DB + RF alto funcionando |
+| 6 | **auditor** | app-audit | todo | audit.md | **BLOQUEANTE**: `pnpm audit:builder` exit 0 + matriz de trazabilidad completa + no hay huecos críticos |
 
 **Regla de gate**: antes de invocar la skill de una fase, verifica que el
 artefacto de la fase anterior existe y está completo (no vacío, sin secciones
