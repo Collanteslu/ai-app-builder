@@ -63,7 +63,7 @@ Write-Host "⤓ Descargando instaladores..."
 
 # Descargar bootstrap.ps1 (Claude Code)
 $claudeInstaller = "$tmpDir\claude-init.ps1"
-Invoke-WebRequest -Uri "$baseUrl/scripts/bootstrap.ps1" -OutFile $claudeInstaller -UseBasicParsing -q
+Invoke-WebRequest -Uri "$baseUrl/scripts/bootstrap.ps1" -OutFile $claudeInstaller -UseBasicParsing
 
 # Descargar opencode equivalent
 $opencodeInstaller = "$tmpDir\opencode-init.ps1"
