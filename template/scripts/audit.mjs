@@ -62,12 +62,14 @@ const services = files.filter((f) => /\/services\/.*(service|validator)\.ts$/i.t
 for (const f of pages) {
   const src = read(f);
   let m;
-  const re = /=\s*\[/g;
+  const re = /(\w*)\s*=\s*\[/g;
   while ((m = re.exec(src)) !== null) {
     const before = src.slice(Math.max(0, m.index - 120), m.index);
     const lineStart = src.lastIndexOf("\n", m.index);
     const prevLine = src.slice(src.lastIndexOf("\n", lineStart - 1), lineStart);
     if (/audit-ignore/.test(before) || /audit-ignore/.test(prevLine)) continue;
+    // Constante en UPPER_SNAKE_CASE = convención de config/enum, no datos mock.
+    if (m[1] && /^[A-Z][A-Z0-9_]*$/.test(m[1])) continue;
     const chunk = src.slice(m.index, m.index + 1200);
     if (!chunk.includes("{")) continue;
     const keys = new Set();
@@ -83,15 +85,40 @@ for (const f of pages) {
 }
 
 // ── 2. CRÍTICO — fetch a /api/... sin carpeta de endpoint ─────────────────────
+// Recorre la ruta COMPLETA segmento a segmento (no solo el primero): un segmento
+// estático debe existir como carpeta literal; un segmento dinámico (`${...}` o
+// todo dígitos, p. ej. un id) casa con cualquier carpeta `[param]` existente. Así
+// `fetch('/api/users/profile')` con users/ pero sin users/profile/ se detecta.
 const apiDir = join(SRC, "app", "api");
+const dynChild = (dir) => existsSync(dir) && readdirSync(dir, { withFileTypes: true }).find((e) => e.isDirectory() && /^\[.+\]$/.test(e.name));
+function resolveApiPath(segments) {
+  let dir = apiDir;
+  for (const seg of segments) {
+    const dynamic = /\$\{/.test(seg) || /^\d+$/.test(seg);
+    if (dynamic) {
+      const child = dynChild(dir);
+      if (!child) return false;
+      dir = join(dir, child.name);
+    } else {
+      const literal = join(dir, seg);
+      if (existsSync(literal)) dir = literal;
+      else {
+        const child = dynChild(dir); // tolera que el segmento esté modelado como dinámico
+        if (!child) return false;
+        dir = join(dir, child.name);
+      }
+    }
+  }
+  return existsSync(join(dir, "route.ts"));
+}
 for (const f of [...pages, ...files.filter((x) => x.endsWith(".ts") && !x.endsWith("route.ts"))]) {
   const src = read(f);
-  for (const fm of src.matchAll(/fetch\(\s*[`"']\/api\/([^`"'?\s)$]+)/g)) {
-    const first = fm[1].split("/")[0].replace(/\$\{.*$/, "").trim();
-    if (!first) continue;
-    if (!existsSync(join(apiDir, first))) {
+  for (const fm of src.matchAll(/fetch\(\s*[`"']\/api\/([^`"'?\s)]+)/g)) {
+    const segments = fm[1].split("/").filter(Boolean);
+    if (!segments.length) continue;
+    if (!resolveApiPath(segments)) {
       const lineNo = src.slice(0, fm.index).split("\n").length;
-      crit("WIRING", `${posix(f)}:${lineNo}`, `fetch a /api/${fm[1]} pero no existe src/app/api/${first}/`);
+      crit("WIRING", `${posix(f)}:${lineNo}`, `fetch a /api/${fm[1]} pero no existe su route.ts (ningún src/app/api/${segments.join("/")}/route.ts ni equivalente dinámico).`);
     }
   }
 }
@@ -102,9 +129,24 @@ for (const f of [...pages, ...files.filter((x) => x.endsWith(".ts") && !x.endsWi
 // servicio usado desde lib/ (p. ej. auth-service en lib/auth.ts, o un validator
 // usado por otro servicio).
 const nonTestSrc = files.filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\./.test(posix(f)));
+// Clave de import por servicio. Un `index.ts` se importa por su CARPETA, no por
+// "index" (`from '@/services/user'`). Si dos servicios comparten basename
+// (services/auth/validator vs services/payment/validator), casar solo por base
+// daría un falso negativo: exigimos también el directorio padre para desambiguar.
+const baseCount = {};
+const svcKey = (svc) => {
+  const parts = posix(svc).replace(/\.ts$/, "").split("/");
+  const base = parts.pop();
+  const parent = parts.pop();
+  return base === "index" ? { tail: parent, needParent: false } : { tail: base, needParent: true, parent };
+};
+for (const svc of services) baseCount[svcKey(svc).tail] = (baseCount[svcKey(svc).tail] || 0) + 1;
 for (const svc of services) {
-  const base = svc.split(sep).pop().replace(/\.ts$/, "");
-  const importRe = new RegExp(`(from\\s+|import\\(\\s*)["'\`][^"'\`]*[/]${base}["'\`]`);
+  const { tail, needParent, parent } = svcKey(svc);
+  // Si el basename colisiona con otro servicio, exige la ruta padre/base completa.
+  const ambiguous = needParent && parent && baseCount[tail] > 1;
+  const pattern = ambiguous ? `[/]${parent}[/]${tail}` : `[/]${tail}`;
+  const importRe = new RegExp(`(from\\s+|import\\(\\s*)["'\`][^"'\`]*${pattern}["'\`]`);
   const used = nonTestSrc.some((f) => f !== svc && importRe.test(read(f)));
   if (!used) {
     crit("ORPHAN-SERVICE", posix(svc), `el servicio no se usa en ningún endpoint ni componente (capa de lógica muerta). Cablea su uso en el route/página o elimínalo.`);
