@@ -16,30 +16,93 @@ capas:
    repo**, no se referencian de fuera. Si cambias de stack (p. ej. Supabase o
    Drizzle), añades esa skill concreta y listo.
 
-## Quick Start (un comando)
+## Quick Start — Master Installer (un comando)
 
 Estando **dentro de la carpeta de tu nuevo proyecto** (vacía), ejecuta una línea
-y queda todo listo: descarga el constructor, instala las skills aquí, copia
-`stack.md` e inicializa git. Luego abres Claude y le dices tu idea.
+que te **pregunta qué plataforma quieres** (Claude Code, OpenCode, Reasonix, o todas)
+y luego instala lo necesario:
 
 **macOS / Linux**
 ```bash
 mkdir mi-app && cd mi-app
-curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/bootstrap.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/ai-builder-init.sh)
 ```
 
 **Windows / PowerShell**
 ```powershell
 mkdir mi-app; cd mi-app
+irm https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/ai-builder-init.ps1 | iex
+```
+
+El instalador **pregunta interactivamente**: ¿Claude Code, OpenCode, Reasonix, o Múltiples?
+Según tu respuesta, instala solo lo que necesitas. Luego: edita `stack.md` y abre tu plataforma.
+
+> **Nota:** Requiere `git`. Si quieres instalar **sin preguntas**, ve a
+> [Instaladores específicos](#instaladores-elige-tu-plataforma) abajo.
+
+---
+
+## Instaladores — Elige tu plataforma
+
+¿Prefieres **no que te pregunte** y instalar directo? Elige la opción que necesites:
+
+### Claude Code (solo)
+**macOS / Linux:**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/install.sh) --project
+```
+
+**Windows (PowerShell):**
+```powershell
 irm https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/bootstrap.ps1 | iex
 ```
 
-Al terminar te imprime cómo lanzar el build-app. En resumen: edita `stack.md` y
-di en Claude Code *"Quiero crear una aplicación para [tu idea]"*. Para actualizar
-el constructor, vuelve a ejecutar el mismo comando.
+Instala: `.claude/skills/` + `.claude/template/` + `CLAUDE.md` + `stack.md` + `git init`.
 
-> Requiere `git`. El one-liner usa el repo público `Collanteslu/ai-app-builder`
-> (rama `v2`); si lo bifurcas, cambia la URL o exporta `AI_BUILDER_REPO`.
+### OpenCode (solo)
+**macOS / Linux:**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/install.sh) --project
+# Selecciona opción 2 cuando pregunte
+```
+
+Instala: `.opencode/agents/` + `.opencode/skills/` + `OPENCODE.md` + `opencode.json` + `stack.md`.
+
+### Reasonix (DeepSeek-native)
+**macOS / Linux:**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/reasonix-init.sh)
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/reasonix-init.ps1 | iex
+```
+
+Instala: `.reasonix/agents/` + `.reasonix/skills/` + `.reasonix/template/` + `REASONIX.md` +
+`reasonix.toml` + `stack.md`. [Lee la guía rápida](REASONIX_QUICK_START.md).
+
+### Múltiples plataformas (todas en uno)
+Si quieres trabajar con **Claude Code + OpenCode + Reasonix** simultáneamente:
+
+**macOS / Linux:**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/ai-builder-init.sh)
+# Selecciona opción 4
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/ai-builder-init.ps1 | iex
+# Selecciona opción 4
+```
+
+Instala todo con **symlinks inteligentes** para evitar duplicación. Lee:
+- [`INSTALLERS.md`](INSTALLERS.md) — documentación completa de instaladores
+- [`REASONIX_QUICK_START.md`](REASONIX_QUICK_START.md) — guía rápida para Reasonix
+- [`REASONIX_INTEGRATION.md`](REASONIX_INTEGRATION.md) — detalles técnicos de Reasonix
+
+---
 
 ## Inicio rápido — crear una app paso a paso
 
@@ -144,9 +207,9 @@ crear una aplicación para [tu idea]"*. Salta directo al paso 4 de abajo.
 Cuando termines y quieras quitar el andamiaje (skills, `stack.md`) sin tocar tu
 código, usa `scripts\uninstall.ps1` — ver [Desinstalar](#desinstalar-borrar-el-andamiaje-al-terminar).
 
-> **En opencode** el flujo es el mismo, pero no instalas nada: abre el repo con
-> `opencode` y usa `/build-app quiero crear una aplicación para [tu idea]`. Ver
-> [Instalación en opencode](#instalación-en-opencode).
+> **En OpenCode / Reasonix** el flujo es el mismo, pero no instalas nada: abre el repo con
+> `opencode` o `reasonix` y usa `/build-app quiero crear una aplicación para [tu idea]`.
+> Ver [Instalación en OpenCode / Reasonix](#instalación-en-opencode--reasonix).
 
 ## v2 — Mejoras
 
@@ -282,11 +345,15 @@ O simplemente a mano: `Remove-Item -Recurse -Force .claude\skills` y borra
 `stack.md` / `model-profiles.md`. Conserva `.builder\` si quieres la doc y la
 trazabilidad; bórralo si no la necesitas.
 
-## Instalación en opencode
+## Instalación en OpenCode / Reasonix
 
-opencode descubre automáticamente las skills desde `skills/`, los agentes desde
-`.opencode/agents/`, las instrucciones desde `.opencode/instructions/` y los
-comandos desde `.opencode/commands/`. Abre el repo y todo funciona:
+Tanto OpenCode como Reasonix descubren automáticamente:
+- Skills desde `skills/`
+- Agentes desde `.opencode/agents/` o `.reasonix/agents/`
+- Instrucciones desde `.opencode/instructions/`
+- Comandos desde `.opencode/commands/`
+
+### OpenCode
 
 ```bash
 cd ruta/al/repo
@@ -294,15 +361,9 @@ opencode
 ```
 
 Luego usa el comando incorporado:
-
 > `/build-app quiero crear una aplicación para [tu idea]`
 
-O simplemente dile al agente:
-
-> "Quiero crear una aplicación para [tu idea]"
-
 Para usar las skills desde **otro proyecto** sin copiarlas, añade a tu `opencode.json`:
-
 ```json
 {
   "skills": {
@@ -311,8 +372,22 @@ Para usar las skills desde **otro proyecto** sin copiarlas, añade a tu `opencod
 }
 ```
 
-Copia `config/stack.md` a la raíz del proyecto donde vayas a trabajar y
-ajústalo a tu stack antes de empezar.
+### Reasonix
+
+```bash
+cd ruta/al/repo
+reasonix
+```
+
+En el chat:
+> `/build-app quiero crear una aplicación para [tu idea]`
+
+Reasonix carga **automáticamente** las skills del `.reasonix/skills/` y los agentes
+del `.reasonix/agents/`. Para **usar en otro proyecto**, copia `.reasonix/` o configura
+en `reasonix.toml` (ver [`REASONIX.md`](REASONIX.md)).
+
+**Tip:** Usa el **master installer** (`ai-builder-init.sh` / `ai-builder-init.ps1`)
+para instalar automáticamente todo lo que necesites. Ver [Quick Start](#quick-start--master-installer-un-comando).
 
 ## Cómo se usa
 
@@ -324,7 +399,7 @@ Simplemente dile:
 
 (o la frase de arranque inequívoca: **"inicia el constructor de apps"**).
 
-### En opencode
+### En OpenCode
 
 Usa el comando incorporado:
 
@@ -334,6 +409,22 @@ O simplemente dile al agente:
 
 > "Quiero crear una aplicación para [tu idea]"
 
+### En Reasonix
+
+Usa el comando (si está instalado):
+
+> `/build-app quiero crear una aplicación para [tu idea]`
+
+O simplemente escribe tu idea en el chat de Reasonix:
+
+> "Quiero crear una aplicación para [tu idea]"
+
+Lee [`REASONIX_QUICK_START.md`](REASONIX_QUICK_START.md) para instrucciones específicas.
+
+---
+
+**Flujo común (todas las plataformas):**
+
 El orquestador se dispara, aplica el **gate de stack** (que `stack.md` exista y
 no tenga campos `(definir)` sin resolver), inicializa git si hace falta, y
 arranca. Si la idea aún es difusa ("tengo una idea pero no la tengo clara"),
@@ -342,6 +433,23 @@ formalizar; si ya la tienes clara, salta directo a Discovery. A partir de ahí t
 va llevando fase por fase con **agentes especializados**: el `arquitecto` diseña
 (lectura), el `scaffolder` construye (escritura), el `auditor` verifica (lectura).
 Cada fase termina con commit del artefacto y un bloque de handoff.
+
+---
+
+## Documentación por plataforma
+
+Después de instalar, lee los documentos específicos:
+
+| Plataforma | Referencia | Descripción |
+|-----------|-----------|-----------|
+| **Claude Code** | [`CLAUDE.md`](CLAUDE.md) | Instrucciones completas para Claude Code |
+| **OpenCode** | [`OPENCODE.md`](OPENCODE.md) | Instrucciones y workflow en OpenCode |
+| **Reasonix** | [`REASONIX_QUICK_START.md`](REASONIX_QUICK_START.md) | Guía rápida de 5 minutos |
+| **Reasonix** | [`REASONIX.md`](REASONIX.md) | Instrucciones completas (se instala en tu proyecto) |
+| **Reasonix** | [`REASONIX_INTEGRATION.md`](REASONIX_INTEGRATION.md) | Detalles técnicos de la integración |
+| **Todos** | [`INSTALLERS.md`](INSTALLERS.md) | Documentación de todos los instaladores |
+
+---
 
 ## Por qué funciona (mecanismos y refuerzos)
 
