@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 # ai-builder-init.sh — Master installer para todas las plataformas
+# Instalación DIRECTA sin preguntas duplicadas
 #
 # Uso:
 #   curl -fsSL https://raw.githubusercontent.com/.../scripts/ai-builder-init.sh | bash
 #
-# Pregunta: ¿Claude Code, OpenCode, Reasonix, o Múltiples?
-# Según respuesta, ejecuta el instalador correspondiente.
-#
 set -euo pipefail
 
-REPO="https://github.com/Collanteslu/ai-app-builder.git"
 BRANCH="v2"
 BASE_URL="https://raw.githubusercontent.com/Collanteslu/ai-app-builder/$BRANCH"
 
@@ -23,7 +20,7 @@ if ! command -v git &> /dev/null; then
 fi
 
 # ──────────────────────────────────────────────────────────────────────────
-# Menú principal
+# Menú principal (ÚNICA PREGUNTA)
 # ──────────────────────────────────────────────────────────────────────────
 
 echo ""
@@ -56,65 +53,151 @@ case "$choice" in
 esac
 
 # ──────────────────────────────────────────────────────────────────────────
-# Descargar e instalar según opción
+# Descargar el repositorio a un temporal
+# ──────────────────────────────────────────────────────────────────────────
+
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+echo "📥 Descargando AI App Builder..."
+git clone --quiet --depth 1 --branch "$BRANCH" https://github.com/Collanteslu/ai-app-builder.git "$TMPDIR" 2>/dev/null || {
+  echo "❌ Error descargando repositorio. Verifica tu conexión a internet."
+  exit 1
+}
+
+# ──────────────────────────────────────────────────────────────────────────
+# Instalación según opción (SIN PREGUNTAS ADICIONALES)
 # ──────────────────────────────────────────────────────────────────────────
 
 case "$choice" in
   1)
     echo ""
-    echo "📦 Instalando para Claude Code..."
+    echo "📦 Instalando AI App Builder para Claude Code..."
     echo ""
-    bash <(curl -fsSL "$BASE_URL/scripts/install.sh") --project
+
+    # Copiar skills
+    mkdir -p ".claude/skills"
+    cp -R "$TMPDIR/skills/"* ".claude/skills/" 2>/dev/null || true
+    echo "✅ Skills instaladas en .claude/skills"
+
+    # Copiar archivos de config
+    [ ! -f "CLAUDE.md" ] && cp "$TMPDIR/CLAUDE.md" . && echo "📄 CLAUDE.md"
+    [ ! -f "stack.md" ] && cp "$TMPDIR/config/stack.md" . && echo "📄 stack.md"
+    [ ! -f "model-profiles.md" ] && cp "$TMPDIR/config/model-profiles.md" . && echo "📄 model-profiles.md"
+
+    # Git init
+    if [ ! -d ".git" ]; then
+      git init -q && echo "🔧 git init"
+    fi
+
+    echo ""
+    echo "✅ Instalación completada para Claude Code"
     ;;
 
   2)
     echo ""
-    echo "📦 Instalando para OpenCode..."
+    echo "📦 Instalando AI App Builder para OpenCode..."
     echo ""
-    bash <(curl -fsSL "$BASE_URL/scripts/install.sh") --project
-    # La opción 2 se selecciona interactivamente en el script
+
+    # Copiar skills y agentes
+    mkdir -p ".opencode/skills"
+    cp -R "$TMPDIR/skills/"* ".opencode/skills/" 2>/dev/null || true
+    mkdir -p ".opencode/agents" ".opencode/instructions" ".opencode/commands"
+    [ -d "$TMPDIR/.opencode/agents" ] && cp -R "$TMPDIR/.opencode/agents/"* ".opencode/agents/" 2>/dev/null || true
+    [ -d "$TMPDIR/.opencode/instructions" ] && cp -R "$TMPDIR/.opencode/instructions/"* ".opencode/instructions/" 2>/dev/null || true
+    [ -d "$TMPDIR/.opencode/commands" ] && cp -R "$TMPDIR/.opencode/commands/"* ".opencode/commands/" 2>/dev/null || true
+    echo "✅ OpenCode instalado"
+
+    # Copiar archivos de config
+    [ ! -f "OPENCODE.md" ] && cp "$TMPDIR/OPENCODE.md" . && echo "📄 OPENCODE.md"
+    [ ! -f "opencode.json" ] && cp "$TMPDIR/opencode.json" . && echo "📄 opencode.json"
+    [ ! -f "stack.md" ] && cp "$TMPDIR/config/stack.md" . && echo "📄 stack.md"
+
+    # Git init
+    if [ ! -d ".git" ]; then
+      git init -q && echo "🔧 git init"
+    fi
+
+    echo ""
+    echo "✅ Instalación completada para OpenCode"
     ;;
 
   3)
     echo ""
-    echo "📦 Instalando para Reasonix..."
+    echo "📦 Instalando AI App Builder para Reasonix..."
     echo ""
-    bash <(curl -fsSL "$BASE_URL/scripts/reasonix-init.sh")
+
+    # Copiar skills y agentes
+    mkdir -p ".reasonix/skills"
+    cp -R "$TMPDIR/skills/"* ".reasonix/skills/" 2>/dev/null || true
+    mkdir -p ".reasonix/agents"
+    [ -d "$TMPDIR/.reasonix/agents" ] && cp -R "$TMPDIR/.reasonix/agents/"* ".reasonix/agents/" 2>/dev/null || true
+    echo "✅ Reasonix instalado"
+
+    # Copiar archivos de config
+    [ ! -f "REASONIX.md" ] && cp "$TMPDIR/REASONIX.md" . && echo "📄 REASONIX.md"
+    [ ! -f "REASONIX_QUICK_START.md" ] && cp "$TMPDIR/REASONIX_QUICK_START.md" . && echo "📄 REASONIX_QUICK_START.md"
+    [ ! -f "stack.md" ] && cp "$TMPDIR/config/stack.md" . && echo "📄 stack.md"
+
+    # Git init
+    if [ ! -d ".git" ]; then
+      git init -q && echo "🔧 git init"
+    fi
+
+    echo ""
+    echo "✅ Instalación completada para Reasonix"
     ;;
 
   4)
     echo ""
-    echo "📦 Instalando para Claude Code + OpenCode + Reasonix..."
-    echo ""
-    echo "Este instalador se ejecutará 3 veces (una por plataforma)."
+    echo "📦 Instalando para todas las plataformas (Claude Code + OpenCode + Reasonix)..."
     echo ""
 
-    # Claude Code (opción 1)
-    echo "─ Fase 1: Claude Code"
-    bash <(curl -fsSL "$BASE_URL/scripts/install.sh") --project
-    # En el script interactivo, selecciona opción 1
+    # Copiar skills comunes
+    mkdir -p ".claude/skills"
+    cp -R "$TMPDIR/skills/"* ".claude/skills/" 2>/dev/null || true
+    echo "✅ Skills base instaladas en .claude/skills"
 
-    # OpenCode (opción 2)
-    echo ""
-    echo "─ Fase 2: OpenCode"
-    bash <(curl -fsSL "$BASE_URL/scripts/install.sh") --project
-    # En el script interactivo, selecciona opción 2
+    # Claude Code
+    echo "  ✓ Fase 1: Claude Code"
+    [ ! -f "CLAUDE.md" ] && cp "$TMPDIR/CLAUDE.md" . && echo "    📄 CLAUDE.md"
 
-    # Reasonix (opción 3)
-    echo ""
-    echo "─ Fase 3: Reasonix"
-    bash <(curl -fsSL "$BASE_URL/scripts/reasonix-init.sh")
+    # OpenCode (con symlink)
+    echo "  ✓ Fase 2: OpenCode"
+    mkdir -p ".opencode/agents" ".opencode/instructions" ".opencode/commands"
+    [ -d "$TMPDIR/.opencode/agents" ] && cp -R "$TMPDIR/.opencode/agents/"* ".opencode/agents/" 2>/dev/null || true
+    ln -sf "../.claude/skills" ".opencode/skills" 2>/dev/null || true
+    echo "    🔗 Skills linked: .opencode/skills → .claude/skills"
+    [ ! -f "OPENCODE.md" ] && cp "$TMPDIR/OPENCODE.md" . && echo "    📄 OPENCODE.md"
+    [ ! -f "opencode.json" ] && cp "$TMPDIR/opencode.json" . && echo "    📄 opencode.json"
+
+    # Reasonix (con symlink)
+    echo "  ✓ Fase 3: Reasonix"
+    mkdir -p ".reasonix/agents"
+    [ -d "$TMPDIR/.reasonix/agents" ] && cp -R "$TMPDIR/.reasonix/agents/"* ".reasonix/agents/" 2>/dev/null || true
+    ln -sf "../.claude/skills" ".reasonix/skills" 2>/dev/null || true
+    echo "    🔗 Skills linked: .reasonix/skills → .claude/skills"
+    [ ! -f "REASONIX.md" ] && cp "$TMPDIR/REASONIX.md" . && echo "    📄 REASONIX.md"
+
+    # Config común
+    [ ! -f "stack.md" ] && cp "$TMPDIR/config/stack.md" . && echo "📄 stack.md"
+    [ ! -f "model-profiles.md" ] && cp "$TMPDIR/config/model-profiles.md" . && echo "📄 model-profiles.md"
+
+    # Git init
+    if [ ! -d ".git" ]; then
+      git init -q && echo "🔧 git init"
+    fi
 
     echo ""
     echo "✅ Instalación múltiple completada"
-    echo "   Todo está listo para trabajar con las 3 plataformas"
     ;;
 esac
 
 echo ""
-echo "🎉 ¡Listo! Lee los documentos para empezar:"
-echo "  • CLAUDE.md (si instalaste Claude Code)"
-echo "  • OPENCODE.md (si instalaste OpenCode)"
-echo "  • REASONIX.md (si instalaste Reasonix)"
-echo "  • REASONIX_QUICK_START.md (para Reasonix rápido)"
+echo "🎉 ¡Listo!"
+echo ""
+echo "Siguiente:"
+echo "  1) Edita stack.md (define qué plataforma usarás)"
+echo "  2) Abre tu IDE en esta carpeta"
+echo "  3) Cuéntale a Claude: 'Quiero crear una aplicación para [tu idea]'"
 echo ""
