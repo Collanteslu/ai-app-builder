@@ -486,15 +486,57 @@ Cada archivo que implementa un requisito lleva en cabecera:
 // Ver: .builder/architecture.md §4
 ```
 
+## Gates ejecutables (verificación antes de cerrar Fase 5)
+
+La Fase 5 no confía en declaraciones de memoria. Los gates REALES son:
+
+### 1. `pnpm audit:builder` — auditoría automática
+Detecta CRÍTICOS que bloquean:
+- **INLINE-DATA**: arrays de datos mock dentro de componentes
+- **WIRING**: fetch() sin su route.ts correspondiente
+- **ORPHAN-SERVICE**: servicios que no se usan
+- **NO-ZOD**: endpoints que leen body sin validar
+- **CREATE-EDIT**: hay `/new/` pero falta `[id]/edit/`
+
+Si **exit 0**: OK. Si **exit ≠ 0**: cierra el crítico antes de cerrar la fase.
+
+```bash
+pnpm audit:builder
+# Salida: "✅ cero CRÍTICOS" o "❌ CRÍTICO: [descripción]"
+```
+
+### 2. `pnpm audit:wiring` — verificación de fetch ↔ route.ts
+Bucle sobre todos los fetch():
+- Extrae ruta de `fetch('/api/X/...')`
+- Verifica que existe `src/app/api/X/route.ts`
+- Reporta fetch huérfano como CRÍTICO
+
+También reporta CRÍTICO si hay arrays mock inline.
+
+Si **exit 0**: OK. Si **exit ≠ 0**: fix wiring antes de cerrar.
+
+```bash
+pnpm audit:wiring
+# Salida: "✅ Wiring OK: N fetch() verificados" o "❌ CRÍTICO: fetch sin route"
+```
+
+### 3. Suite de tests en verde
+```bash
+pnpm test:run                      # unit + API
+pnpm db:test:up && pnpm test:e2e  # e2e contra test DB
+```
+
+Si hay tests en rojo en prioridad alta: fija antes de cerrar.
+
 ## Definition of Done: BLOQUEANTES vs MEJORAS
 
 **BLOQUEANTE** (must-have para pasar a Fase 6): cierra Fase 5 solo si estos 6 items están ✓:
 1. `pnpm audit:builder` **exit 0** (zero CRÍTICOS)
-2. WIRING CHECK OK (cada fetch() tiene route.ts)
-3. ZERO INLINE DATA (ningún array mock en páginas)
-4. AUTH REAL (NextAuth con session, no simulado)
-5. TEST DB AISLADA (DATABASE_URL_TEST, no DATABASE_URL)
-6. Cada RF de prioridad alta funciona de punta a punta
+2. `pnpm audit:wiring` **exit 0** (cada fetch() tiene route.ts, zero inline data)
+3. AUTH REAL (NextAuth con session, no simulado)
+4. TEST DB AISLADA (DATABASE_URL_TEST, no DATABASE_URL)
+5. Suite de tests en verde contra test DB (unit + API de prioridad alta)
+6. Cada RF de prioridad alta funciona de punta a punta (navegable, datos reales desde DB/seed)
 
 **MEJORA** (aviso, no bloquea): reporta en el handoff pero permiten cerrar Fase 5:
 - E2E del flujo principal (puede estar incompleto)

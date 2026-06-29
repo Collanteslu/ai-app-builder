@@ -86,20 +86,42 @@ Recorre las cadenas en ambos sentidos y reporta cualquier rotura:
 - ¿Métricas de éxito del discovery siguen reflejadas en el PRD?
 - ¿Alguna sección quedó como TODO o vacía en algún artefacto?
 
-## Auditoría ejecutable (gate duro)
+## Auditoría ejecutable (gates duros)
 
 Las comprobaciones no se declaran "pasadas" de memoria: se **ejecutan**. El
-template incluye un auditor real, cross-platform (Node), en
-`scripts/audit.mjs`, disponible como script de npm:
+template incluye auditorías reales, cross-platform (Node):
+
+### 1. `pnpm audit:builder` — auditor automático
+Detecta CRÍTICOS que **bloquean cierre**:
+- **INLINE-DATA**: arrays de datos mock dentro de componentes
+- **WIRING**: fetch() sin su route.ts
+- **ORPHAN-SERVICE**: servicios no usados
+- **NO-ZOD**: endpoints sin validación Zod
+- **CREATE-EDIT**: formularios de creación sin formularios de edición
 
 ```bash
-pnpm audit:builder      # = node scripts/audit.mjs
+pnpm audit:builder
+# Salida: "✅ cero CRÍTICOS" o lista de CRÍTICOS
 ```
 
-**Esta es la regla de oro de la fase:** el cierre depende del **código de salida**,
-no de la narración del modelo. Si `audit:builder` devuelve **exit≠0**, hay un
-hueco **CRÍTICO** y el orquestador **NO puede cerrar la Fase 6** — vuelve a la
-Fase 5 a corregirlo. Pégale la salida real (no la resumas inventando).
+**Regla de oro**: Si `audit:builder` devuelve **exit≠0**, hay un hueco
+**CRÍTICO** y el orquestador **NO puede cerrar la Fase 6** — vuelve a la
+Fase 5 a corregirlo. Pégale la salida real en `audit.md` (no la resumas).
+
+### 2. `pnpm audit:wiring` — verificación de integridad
+Bucle sobre todos los fetch() y verifica ruta.
+
+```bash
+pnpm audit:wiring
+# Exit 0 = OK, Exit 1 = crítico (wiring o inline data)
+```
+
+### 3. Suite completa en verde contra test DB
+```bash
+pnpm test:run                      # unit + API
+pnpm db:test:up && pnpm test:e2e  # e2e contra test DB
+# Salida: todos los tests de RF de prioridad alta en verde
+```
 
 ### Rúbrica de severidad (fija, no la degrades)
 

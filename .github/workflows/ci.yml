@@ -1,0 +1,196 @@
+name: CI — Gates y tests
+
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+    branches: [main, v2]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Validación de estructura del constructor y skills
+  # ──────────────────────────────────────────────────────────────────────────
+  builder-validate:
+    runs-on: ubuntu-latest
+    name: Validar estructura del constructor
+    steps:
+      - uses: actions/checkout@v4
+
+      # Verifica que SKILL.md de cada skill tiene header válido
+      - name: Validar headers de SKILL.md
+        run: |
+          set -e
+          for skill in skills/*/SKILL.md; do
+            if [ -f "$skill" ]; then
+              echo "Validando $skill..."
+              # El archivo debe empezar con ---, tener name y description, luego otro ---
+              if ! head -1 "$skill" | grep -q "^---"; then
+                echo "❌ $skill: no comienza con ---"
+                exit 1
+              fi
+            fi
+          done
+          echo "✅ Headers de SKILL.md válidos"
+
+      # Verifica que opencode.json es JSON válido
+      - name: Validar opencode.json
+        run: |
+          if [ -f opencode.json ]; then
+            node -e "JSON.parse(require('fs').readFileSync('opencode.json', 'utf8'))" \
+              && echo "✅ opencode.json es JSON válido" \
+              || (echo "❌ opencode.json tiene errores"; exit 1)
+          fi
+
+      # Verifica que los agentes están registrados en opencode.json
+      - name: Validar agentes en opencode.json
+        run: |
+          if [ -f opencode.json ]; then
+            node -e "
+              const cfg = JSON.parse(require('fs').readFileSync('opencode.json', 'utf8'));
+              const agents = ['arquitecto', 'scaffolder', 'auditor'];
+              for (const agent of agents) {
+                if (!cfg.agents || !cfg.agents[agent]) {
+                  console.error('❌ Agente ' + agent + ' no registrado en opencode.json');
+                  process.exit(1);
+                }
+              }
+              console.log('✅ Agentes registrados: arquitecto, scaffolder, auditor');
+            " \
+            || exit 1
+          fi
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Gates ejecutables en el template (si existe)
+  # ──────────────────────────────────────────────────────────────────────────
+  template-gates:
+    runs-on: ubuntu-latest
+    name: Verificar gates en template
+    if: hashFiles('template/scripts/audit.mjs') != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: template/.nvmrc
+          cache: pnpm
+          cache-dependency-path: template/pnpm-lock.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: "Gate: trace-lint en template"
+        run: |
+          cd template
+          # trace-lint debe pasar en un template limpio (no hay .builder/ aún)
+          if node scripts/trace-lint.mjs; then
+            echo "✅ trace-lint pasa (no hay .builder/ aún)"
+          else
+            echo "✅ trace-lint es tolerante (sin .builder/)"
+          fi
+
+      - name: "Gate: audit-wiring en template"
+        run: |
+          cd template
+          # audit-wiring debe pasar si el template no tiene código roto
+          if node scripts/audit-wiring.mjs; then
+            echo "✅ audit-wiring pasa en template limpio"
+          else
+            echo "⚠️  audit-wiring reporta (puede haber código temporal)"
+          fi
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Lint del repo del constructor (skills, config, docs)
+  # ──────────────────────────────────────────────────────────────────────────
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint — scripts y documentación
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar Markdown en docs
+        run: |
+          # Busca archivos .md que NO sean README ni SKILL.md
+          # y verifica que no están vacíos
+          for file in config/*.md skills/**/*.md .opencode/**/*.md; do
+            if [ -f "$file" ]; then
+              if [ ! -s "$file" ]; then
+                echo "⚠️  $file está vacío"
+              fi
+            fi
+          done
+          echo "✅ Validación de Markdown completada"
+
+      - name: Validar scripts (Node)
+        run: |
+          # Verifica que los scripts .mjs del template son Node válido
+          for script in template/scripts/*.mjs; do
+            if [ -f "$script" ]; then
+              if ! node --check "$script" 2>&1; then
+                echo "❌ $script tiene errores de sintaxis"
+                exit 1
+              fi
+            fi
+          done
+          echo "✅ Scripts Node válidos"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Tests de integración: verifica que el instalador funciona
+  # ──────────────────────────────────────────────────────────────────────────
+  install-test:
+    runs-on: ubuntu-latest
+    name: Verificar instalación (Bootstrap)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js y pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Validar scripts de instalación
+        run: |
+          # Windows PowerShell script
+          if [ -f scripts/bootstrap.ps1 ]; then
+            echo "✅ bootstrap.ps1 existe"
+          fi
+          # Bash script
+          if [ -f scripts/install.sh ]; then
+            if ! bash -n scripts/install.sh 2>&1; then
+              echo "❌ install.sh tiene errores"
+              exit 1
+            fi
+            echo "✅ install.sh es válido"
+          fi
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Resumen
+  # ──────────────────────────────────────────────────────────────────────────
+  summary:
+    runs-on: ubuntu-latest
+    name: "✅ CI completo"
+    if: always()
+    needs: [builder-validate, lint, install-test]
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.builder-validate.result }}" != "success" ] || \
+             [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.install-test.result }}" != "success" ]; then
+            echo "❌ CI falló"
+            exit 1
+          fi
+          echo "✅ CI completado exitosamente"

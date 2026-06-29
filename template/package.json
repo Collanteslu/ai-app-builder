@@ -12,6 +12,7 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "audit:builder": "node scripts/audit.mjs",
+    "audit:wiring": "node scripts/audit-wiring.mjs",
     "trace:builder": "node scripts/trace-lint.mjs",
     "db:test:up": "docker compose -f docker-compose.test.yml up -d",
     "db:test:down": "docker compose -f docker-compose.test.yml down",
