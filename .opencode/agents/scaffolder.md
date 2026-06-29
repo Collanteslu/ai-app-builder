@@ -21,8 +21,11 @@ Eres un ingeniero de desarrollo senior. Tu función es **generar código funcion
    fix) para no repetirla en el siguiente slice.
 
 ## Template
-El scaffold base está en `.claude/template/` (lo deja el instalador). Si no
-existe ahí, busca `template/` (repo abierto en opencode) o `~/.claude/template/`.
+El scaffold base está en `.opencode/template/` (lo deja el instalador de OpenCode).
+Si no existe ahí, busca:
+- `template/` — repo abierto directamente en .reasonix o editor
+- `../.claude/template/` — si también está instalado Claude Code (symlink)
+
 Cópialo a la raíz del proyecto antes de empezar (ver paso 0 de la skill `app-scaffold`).
 
 ## Post-instalación

@@ -171,11 +171,15 @@ EOF
     fi
   done
 
-  # git init si no existe
+  # git init y commit inicial si es nuevo
   if [ ! -d "$PROJ/.git" ]; then
     cd "$PROJ"
     git init -q
     echo "    🔧 git init"
+    # Crear commit inicial de bootstrap
+    git add -A
+    git commit -q -m "chore: bootstrap opencode builder" 2>/dev/null || true
+    echo "    ✅ commit inicial creado"
   fi
 
   echo ""
@@ -251,28 +255,34 @@ Este proyecto usa el **AI App Builder** en OpenCode.
 
 ## Agentes especializados
 
-OpenCode tiene 3 agentes formales con permisos limitados:
+OpenCode (o Reasonix) tiene 3 agentes formales con permisos limitados:
 
 1. **arquitecto** (Fase 3): diseña SDD, read-only en código
-   ```
-   /load arquitecto
-   ```
+   - Ubicado en: `.opencode/agents/arquitecto.md`
+   - Se invoca automáticamente en Fase 3 del flujo
 
 2. **scaffolder** (Fase 5): genera código, write/edit/bash/browser
-   ```
-   /load scaffolder
-   ```
+   - Ubicado en: `.opencode/agents/scaffolder.md`
+   - Se invoca automáticamente en Fase 5 del flujo
 
 3. **auditor** (Fase 6): verifica trazabilidad, read-only
-   ```
-   /load auditor
-   ```
+   - Ubicado en: `.opencode/agents/auditor.md`
+   - Se invoca automáticamente en Fase 6 del flujo
+
+**Nota:** La sintaxis específica para invocar agentes depende de tu plataforma:
+- En OpenCode tradicional: `/load agente`
+- En Reasonix o plataformas similares: usa la sintaxis nativa de esa herramienta
+- El orquestador se encarga de cargar el agente correcto en el momento correcto
 
 ## Flujo principal
+
+Usa el comando principal de tu plataforma:
 
 ```
 /build-app quiero crear una aplicación para [tu idea]
 ```
+
+(O el equivalente en tu herramienta: opencode, reasonix, etc.)
 
 ## Gates ejecutables
 
@@ -301,11 +311,15 @@ EOF
     fi
   done
 
-  # git init si no existe
+  # git init y commit inicial si es nuevo
   if [ ! -d "$PROJ/.git" ]; then
     cd "$PROJ"
     git init -q
     echo "    🔧 git init"
+    # Crear commit inicial de bootstrap
+    git add -A
+    git commit -q -m "chore: bootstrap opencode builder" 2>/dev/null || true
+    echo "    ✅ commit inicial creado"
   fi
 
   echo ""
@@ -481,5 +495,7 @@ case "$platform_choice" in
 esac
 
 echo ""
-echo "💡 Recuerda: edita stack.md para definir tu configuración técnica."
+echo "⚠️  Importante: stack.md tiene placeholders (definir: ...) para Auth e Infra."
+echo "   Estos se rellenarán automáticamente al iniciar Fase 0/1 del proceso."
+echo "   Si quieres definirlos ahora, adelante. Si no, el orquestador lo hará."
 echo ""

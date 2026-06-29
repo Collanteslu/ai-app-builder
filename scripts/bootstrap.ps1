@@ -194,10 +194,14 @@ Para más detalles: ``.claude/skills/app-orchestrator/SKILL.md``
     }
   }
 
-  # git init si no existe
+  # git init y commit inicial si es nuevo
   if (-not (Test-Path "$proj\.git")) {
     git -C $proj init -q
     Write-Host "    🔧 git init"
+    # Crear commit inicial de bootstrap
+    git -C $proj add -A
+    git -C $proj commit -q -m "chore: bootstrap opencode builder" 2>/dev/null || true
+    Write-Host "    ✅ commit inicial creado"
   }
 
   Write-Host ""
@@ -272,28 +276,34 @@ Este proyecto usa el **AI App Builder** en OpenCode.
 
 ## Agentes especializados
 
-OpenCode tiene 3 agentes formales con permisos limitados:
+OpenCode (o Reasonix) tiene 3 agentes formales con permisos limitados:
 
 1. **arquitecto** (Fase 3): diseña SDD, read-only en código
-   ``````
-   /load arquitecto
-   ``````
+   - Ubicado en: `.opencode/agents/arquitecto.md`
+   - Se invoca automáticamente en Fase 3 del flujo
 
 2. **scaffolder** (Fase 5): genera código, write/edit/bash/browser
-   ``````
-   /load scaffolder
-   ``````
+   - Ubicado en: `.opencode/agents/scaffolder.md`
+   - Se invoca automáticamente en Fase 5 del flujo
 
 3. **auditor** (Fase 6): verifica trazabilidad, read-only
-   ``````
-   /load auditor
-   ``````
+   - Ubicado en: `.opencode/agents/auditor.md`
+   - Se invoca automáticamente en Fase 6 del flujo
+
+**Nota:** La sintaxis específica para invocar agentes depende de tu plataforma:
+- En OpenCode tradicional: `/load agente`
+- En Reasonix o plataformas similares: usa la sintaxis nativa de esa herramienta
+- El orquestador se encarga de cargar el agente correcto en el momento correcto
 
 ## Flujo principal
+
+Usa el comando principal de tu plataforma:
 
 ``````
 /build-app quiero crear una aplicación para [tu idea]
 ``````
+
+(O el equivalente en tu herramienta: opencode, reasonix, etc.)
 
 ## Gates ejecutables
 
@@ -322,10 +332,14 @@ Para más detalles: ``.opencode/skills/app-orchestrator/SKILL.md``
     }
   }
 
-  # git init si no existe
+  # git init y commit inicial si es nuevo
   if (-not (Test-Path "$proj\.git")) {
     git -C $proj init -q
     Write-Host "    🔧 git init"
+    # Crear commit inicial de bootstrap
+    git -C $proj add -A
+    git -C $proj commit -q -m "chore: bootstrap opencode builder" 2>/dev/null || true
+    Write-Host "    ✅ commit inicial creado"
   }
 
   Write-Host ""
@@ -503,5 +517,7 @@ switch ($platform_choice) {
 }
 
 Write-Host ""
-Write-Host "💡 Recuerda: edita stack.md para definir tu configuración técnica."
+Write-Host "⚠️  Importante: stack.md tiene placeholders (definir: ...) para Auth e Infra."
+Write-Host "   Estos se rellenarán automáticamente al iniciar Fase 0/1 del proceso."
+Write-Host "   Si quieres definirlos ahora, adelante. Si no, el orquestador lo hará."
 Write-Host ""

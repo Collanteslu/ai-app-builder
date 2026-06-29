@@ -5,6 +5,41 @@
 # Editores
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # Logs / temporales
 *.log
+.tmp/
+temp/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+
+# Template (se copia al iniciar, no versionar)
+.claude/template/
+.opencode/template/
+
+# Builder artifacts (se generan durante el proceso)
+.builder/
+
+# Reasonix metadata (descomenta si usas Reasonix)
+# .reasonix/
