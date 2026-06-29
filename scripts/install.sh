@@ -12,10 +12,11 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="$HOME/.claude/skills"
+PROJECT=0   # 1 = instalación de proyecto (copia .opencode + opencode.json al cwd)
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --project) DEST="$(pwd)/.claude/skills"; shift;;
+    --project) DEST="$(pwd)/.claude/skills"; PROJECT=1; shift;;
     --dest)    DEST="$2"; shift 2;;
     -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0;;
     *) echo "Opción desconocida: $1" >&2; exit 1;;
@@ -39,7 +40,7 @@ find "$REPO/template" -maxdepth 1 -mindepth 1 ! -name node_modules ! -name .next
 echo "✅ template instalado en $TPL_DEST"
 
 # Soporte opencode (solo instalación de proyecto): .opencode + opencode.json en el cwd.
-if [ "$(dirname "$(dirname "$DEST")")" = "$(pwd)" ]; then
+if [ "$PROJECT" -eq 1 ]; then
   rm -rf "$(pwd)/.opencode"
   mkdir -p "$(pwd)/.opencode"
   find "$REPO/.opencode" -maxdepth 1 -mindepth 1 ! -name node_modules \
