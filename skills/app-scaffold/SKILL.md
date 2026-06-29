@@ -275,33 +275,31 @@ la implementa de verdad con NextAuth. No hay excusa para login simulado.
 
 ### Base de datos de test aislada
 
-Los tests NO pueden compartir la base de datos de desarrollo. El scaffold
-genera:
+Los tests NO pueden compartir la base de datos de desarrollo. El template
+incluye:
 
 1. `docker-compose.test.yml` con PostgreSQL 17 en puerto diferente (5433)
-2. `DATABASE_URL_TEST` en `.env.test` apuntando a `localhost:5433/app_test`
-3. Script `pnpm db:test:setup` que: levanta test DB → migrate → seed
-4. Los tests de API usan `DATABASE_URL_TEST` (no `DATABASE_URL`)
+2. `.env.test` con `DATABASE_URL_TEST=postgresql://user:password@localhost:5433/app_test`
+3. Scripts `pnpm db:test:up` (levanta) y `pnpm db:test:down` (baja)
+4. Los tests de API **deben** usar `DATABASE_URL_TEST` (no `DATABASE_URL`)
 5. Cada suite de test limpia SOLO los datos que creó, nunca el seed
 6. El CI ejecuta los tests contra la test DB, no contra la de desarrollo
 
-```yaml
-# docker-compose.test.yml
-services:
-  postgres-test:
-    image: postgres:17-alpine
-    ports: ["5433:5432"]
-    environment:
-      POSTGRES_DB: app_test
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+**Cómo preparar la BD de test:**
+```bash
+pnpm db:test:up              # levanta docker-compose.test.yml
+DATABASE_URL_TEST=postgresql://user:password@localhost:5433/app_test pnpm db:migrate
+DATABASE_URL_TEST=postgresql://user:password@localhost:5433/app_test pnpm db:seed
+pnpm test:run               # ejecuta tests (deben usar DATABASE_URL_TEST)
+pnpm db:test:down           # baja el contenedor cuando termines
 ```
 
+O crea un script unificado en `package.json` si necesitas `db:test:setup` como comodidad:
 ```bash
-# package.json
-"db:test:setup": "docker compose -f docker-compose.test.yml up -d && DATABASE_URL=... prisma migrate deploy && DATABASE_URL=... prisma db seed"
-"test:run": "DATABASE_URL=$(grep DATABASE_URL_TEST .env.test | cut -d= -f2) vitest run"
+"db:test:setup": "pnpm db:test:up && DATABASE_URL_TEST=... pnpm db:migrate && DATABASE_URL_TEST=... pnpm db:seed"
 ```
+
+El `docker-compose.test.yml` viene listo en el template:
 
 ### Tests API generados automáticamente
 

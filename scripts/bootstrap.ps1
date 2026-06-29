@@ -8,9 +8,10 @@
 
     irm https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/bootstrap.ps1 | iex
 
-  Qué hace: descarga el constructor a una caché (%LOCALAPPDATA%\ai-app-builder),
-  instala las skills en ESTA carpeta (.claude\skills), copia stack.md +
-  model-profiles.md, inicializa git y te explica cómo lanzar el build-app.
+  Qué hace: descarga el constructor a una caché ($HOME\.ai-app-builder, o la ruta de
+  AI_BUILDER_HOME si está definida), instala las skills en ESTA carpeta
+  (.claude\skills), copia stack.md + model-profiles.md, inicializa git y te explica
+  cómo lanzar el build-app.
 
   Variables de entorno opcionales: AI_BUILDER_REPO, AI_BUILDER_BRANCH,
   AI_BUILDER_HOME. La ruta del proyecto es el directorio actual.
