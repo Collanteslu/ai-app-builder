@@ -17,9 +17,11 @@
 #>
 $ErrorActionPreference = 'Stop'
 
+# Cache unificada: $HOME/.ai-app-builder en ambas (bash y PowerShell).
+# Así usuario no tiene dos cachés en localizaciones distintas (WSL vs native).
 $repoUrl = if ($env:AI_BUILDER_REPO)   { $env:AI_BUILDER_REPO }   else { 'https://github.com/Collanteslu/ai-app-builder.git' }
 $branch  = if ($env:AI_BUILDER_BRANCH) { $env:AI_BUILDER_BRANCH } else { 'v2' }
-$cache   = if ($env:AI_BUILDER_HOME)   { $env:AI_BUILDER_HOME }   else { Join-Path $env:LOCALAPPDATA 'ai-app-builder' }
+$cache   = if ($env:AI_BUILDER_HOME)   { $env:AI_BUILDER_HOME }   else { "$HOME\.ai-app-builder" }
 $proj    = (Get-Location).Path
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
