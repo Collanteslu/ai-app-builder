@@ -35,8 +35,13 @@ const warn = (rule, where, msg) => warnings.push({ rule, where, msg });
 
 const read = (f) => (existsSync(f) ? readFileSync(f, "utf8") : null);
 const uniq = (arr) => [...new Set(arr)];
-const idsOf = (txt, prefix) =>
-  txt ? uniq([...txt.matchAll(new RegExp(`\\b${prefix}-(\\d+)`, "g"))].map((m) => `${prefix}-${m[1]}`)) : [];
+// Cuenta SOLO IDs definidos (en inicio de línea), no menciones a mitad de frase.
+// Acepta tanto guión como subrayado: RF-01 y RF_01 se tratan igual (CU-02 vs CU_02).
+const idsOf = (txt, prefix) => {
+  if (!txt) return [];
+  const blocks = splitByIds(txt, prefix);
+  return blocks.map(b => b.id);
+};
 
 if (!existsSync(BUILDER)) {
   console.log("ℹ️  No hay .builder/ — aún no hay artefactos que cotejar.");
@@ -129,7 +134,8 @@ for (const [name, txt] of [["discovery.md", discovery], ["prd.md", prd], ["archi
 // bloque va hasta el siguiente RF definido, para comprobar criterios/prioridad.
 function splitByIds(txt, prefix) {
   // Ancla: inicio de línea + posibles marcadores markdown (#, -, *, dígitos) y el ID.
-  const re = new RegExp(`^[ \\t]*(?:#{1,6}\\s*|[-*]\\s*|\\d+[.)]\\s*)?(${prefix}-\\d+)\\b`, "gm");
+  // Acepta guión y subrayado: RF-01, RF_01, CU-02, CU_02 se tratan igual.
+  const re = new RegExp(`^[ \\t]*(?:#{1,6}\\s*|[-*]\\s*|\\d+[.)]\\s*)?(${prefix}[-_]\\d+)\\b`, "gm");
   const marks = [];
   let m;
   while ((m = re.exec(txt)) !== null) marks.push({ id: m[1], index: m.index });
