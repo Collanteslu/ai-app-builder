@@ -45,8 +45,10 @@ jobs:
               errors=$((errors+1))
               continue
             fi
-            if ! head -1 "$file" | grep -q "^---$"; then
-              echo "❌ $name: falta frontmatter (debe empezar con ---)"
+            # Primera línea NO vacía debe ser '---' (tolera líneas en blanco al inicio).
+            first=$(grep -m1 -v '^[[:space:]]*$' "$file")
+            if [ "$first" != "---" ]; then
+              echo "❌ $name: falta frontmatter (la primera línea con contenido debe ser ---)"
               errors=$((errors+1))
             fi
             if ! grep -q "^name:" "$file"; then
@@ -70,17 +72,51 @@ jobs:
           fi
           echo "✓ Todas las skills válidas"
 
+  test-gates:
+    # Verifica que los GATES ejecutables funcionan: que pasan en verde sobre el
+    # template limpio y que BLOQUEAN (exit 1) ante un hueco real. Un gate roto que
+    # siempre devuelve 0 sería peor que no tener gate.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: audit.mjs pasa sobre el template limpio (exit 0)
+        working-directory: template
+        run: node scripts/audit.mjs
+      - name: audit.mjs BLOQUEA un fetch huérfano (exit 1)
+        run: |
+          fx=$(mktemp -d)
+          mkdir -p "$fx/src/app/p"
+          printf 'export default function P(){fetch("/api/ghost/x");return null}\n' > "$fx/src/app/p/page.tsx"
+          if (cd "$fx" && node "$GITHUB_WORKSPACE/template/scripts/audit.mjs"); then
+            echo "❌ audit.mjs NO bloqueó un fetch a endpoint inexistente"; exit 1
+          fi
+          echo "✓ audit.mjs bloqueó el hueco como se esperaba"
+      - name: trace-lint.mjs BLOQUEA un RF sin arquitectura (exit 1)
+        run: |
+          fx=$(mktemp -d); mkdir -p "$fx/.builder"
+          printf '# PRD\n## RF-01 — X · Prioridad: alta\nDado A, Cuando B, Entonces C.\n' > "$fx/.builder/prd.md"
+          printf '# Arquitectura\n(sin RF-01)\n' > "$fx/.builder/architecture.md"
+          if (cd "$fx" && node "$GITHUB_WORKSPACE/template/scripts/trace-lint.mjs"); then
+            echo "❌ trace-lint.mjs NO bloqueó un RF ausente en la arquitectura"; exit 1
+          fi
+          echo "✓ trace-lint.mjs bloqueó el hueco como se esperaba"
+
   validate-config:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate opencode.json exists
+      - name: Validate opencode.json is valid JSON
         run: |
           if [ ! -f opencode.json ]; then
             echo "❌ opencode.json no existe"
             exit 1
           fi
-          echo "✓ opencode.json presente"
+          node -e "JSON.parse(require('fs').readFileSync('opencode.json','utf8'))" \
+            && echo "✓ opencode.json es JSON válido" \
+            || { echo "❌ opencode.json no es JSON válido"; exit 1; }
       - name: Validate .opencode structure
         run: |
           for dir in agents instructions commands; do
