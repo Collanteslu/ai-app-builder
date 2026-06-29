@@ -10,22 +10,29 @@ y usar**, derivada de los mockups ya validados. NO entregues páginas placeholde
 con "TODO": eso frustra al usuario que viene de ver mockups navegables. Un flujo
 de prioridad alta debe FUNCIONAR de punta a punta, aunque sea con datos en memoria.
 
-## Agente especializado
+## Rol en esta fase
 
-Esta fase es conducida por el agente **scaffolder** (especificado en opencode.json).
-El scaffolder tiene acceso completo (read, write, edit, bash, browser) para generar
-código funcional sin restricciones. Antes de empezar a codificar:
+**En Claude Code:** Yo (Claude) actúo como **scaffolder** — genero código funcional,
+tests (TDD triple bucle), y datos de seed. Tengo acceso completo (read, write, edit,
+bash, browser).
+
+**En OpenCode:** El usuario carga `/load scaffolder` — un agente especializado con
+acceso completo (read, write, edit, bash, browser).
+
+En ambos casos, ANTES de empezar a codificar:
 
 **Recall de memoria.** Si existe `.builder/memory/MEMORY.md`, ejecuta recall con la
-skill `app-memory`. Lee especialmente las memorias de tipo `gotcha`, `decision` y
-`constraint` con `refs` a los RF-XX que vas a implementar. Los gotchas te dicen
-dónde has de poner cuidado (rareza del stack, comportamiento inesperado, trampa
-repetible). Las decisiones de arquitectura te dicen cómo se eligió el stack y por qué.
+skill `app-memory`. Lee especialmente:
+- `gotcha` — rareza del stack, comportamiento inesperado, trampa repetible
+- `decision` — por qué se eligió así la arquitectura
+- `constraint` — restricción técnica o de negocio
 
-Cuando durante el scaffold encuentres un gotcha (un bug inusual, una configuración
-sutil, una incompatibilidad con el stack), captúralo con `capture` de la skill
-`app-memory`, enlazado al RF y al gotcha que lo causó, para que la Fase 6 (y la
-próxima iteración) lo verifique.
+Los gotchas te dicen dónde has de poner cuidado. Las decisiones te dicen cómo
+implementar coherentemente con lo ya decidido.
+
+Cuando encuentres un gotcha nuevo (un bug inusual, una configuración sutil),
+captúralo con `capture` en `app-memory`, enlazado al RF, para que la Fase 6 lo
+verifique.
 
 ## Antes de empezar (gate de entrada)
 

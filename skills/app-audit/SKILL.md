@@ -9,18 +9,24 @@ Objetivo: cazar lo que se haya colado. Esta es la red de seguridad del proceso:
 recorre todos los artefactos y verifica que cada cosa enlaza con la siguiente.
 Lo que no se mapea, se ha olvidado.
 
-## Agente especializado
+## Rol en esta fase
 
-Esta fase es conducida por el agente **auditor** (especificado en opencode.json).
-El auditor tiene permisos de lectura (no modifica código, solo genera `audit.md`
-y captura en memoria). Antes de empezar a auditar:
+**En Claude Code:** Yo (Claude) actúo como **auditor** — verifico trazabilidad y
+calidad, NO modifico código. Genero `audit.md` y reporto huecos.
+
+**En OpenCode:** El usuario carga `/load auditor` — un agente especializado con
+permisos de lectura (read-only en código, write en audit.md + memory).
+
+En ambos casos, ANTES de auditar, ejecuta recall de memoria:
 
 **Recall de memoria.** Si existe `.builder/memory/MEMORY.md`, ejecuta recall con la
-skill `app-memory`. Lee especialmente las memorias de tipo `gotcha`, `constraint` y
-`decision` con `refs` a los RF-XX. Los gotchas indican dónde han fallado las pruebas
-o han aparecido rareza del stack; la auditoría ha de verificar esos puntos específicos
-con atención extra. Las restricciones (business, técnicas) te dicen qué verificar
-que se respeta en el código final.
+skill `app-memory`. Lee especialmente:
+- `gotcha` — dónde han fallado las pruebas, rareza del stack
+- `constraint` — restricción que el código debe respetar
+- `decision` — por qué se eligió así
+
+Los gotchas te dicen dónde auditar con atención extra. Las restricciones te dicen
+qué verificar que se respeta. Las decisiones te dan contexto arquitectónico.
 
 ## Qué lees
 

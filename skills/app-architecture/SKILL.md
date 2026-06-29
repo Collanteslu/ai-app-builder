@@ -23,18 +23,18 @@ CodeIgniter 3, MySQL, query builder) en vez de Prisma/NestJS, y el contrato de
 API puede ser de rutas CI3 clásicas. El modelo de trazabilidad RF-XX no cambia;
 solo cambia la tecnología destino.
 
-## Agente especializado
+## Rol en esta fase
 
-Esta fase es conducida por el agente **arquitecto** (especificado en opencode.json).
-El arquitecto tiene permisos limitados: puede leer artefactos, escribir en
-`architecture.md` y capturar decisiones en memoria, pero NO modifica código. Esto
-asegura que el diseño es puro (no contaminado por detalles de implementación).
+**En Claude Code:** Yo (Claude) actúo como **arquitecto** — diseño sin escribir código.
+Tengo "permisos limitados": puedo leer artefactos, escribir en `architecture.md` y
+capturar decisiones en memoria, pero NO genero ni modifico código. El diseño es puro.
 
-Cuando el agente arquitecto descubre una decisión no obvia (por qué A y no B, en qué
-se diferencia del stack por defecto, cuál es la consecuencia de esta elección),
-ejecuta `capture` con la skill `app-memory`, enlazando la decisión a los RF/RNF que
-toca. Esto construye la memoria de arquitectura que la Fase 5 usa para evitar
-decisiones contradictorias.
+**En OpenCode:** El usuario carga `/load arquitecto` — un agente especializado con
+permisos limitados (read, write a architecture.md + memory, sin edit ni browser).
+
+En ambos casos, cuando descubrimos una decisión no obvia (por qué A y no B, cuál es
+la consecuencia), ejecutamos `capture` con la skill `app-memory`, enlazando la
+decisión a los RF/RNF que toca. Esto construye la memoria que la Fase 5 usa.
 
 ## Qué produces
 

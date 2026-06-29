@@ -83,16 +83,17 @@ O la frase inequívoca si los agentes no se cargan:
 inicia el constructor de apps
 ``````
 
-## Fases
+## Roles de Claude por fase
 
-El orquestador conduce 6 fases:
+**Nota:** Claude Code NO tiene agentes formales (eso es OpenCode).
+En cada fase, Claude juega un rol especializado:
 
-1. **Discovery** → casos de uso (CU-XX)
-2. **PRD** → requisitos (RF-XX) con criterios de aceptación
-3. **Arquitectura** → modelo de datos, endpoints, SDD
-4. **Mockup** → diseño visual navegable
-5. **Scaffold** → código + tests (TDD)
-6. **Auditoría** → verificación de trazabilidad
+1. **Discovery** → Claude es descubridor (extrae CU-XX del análisis)
+2. **PRD** → Claude es analista (define RF-XX con criterios de aceptación)
+3. **Arquitectura** → Claude es **arquitecto** (diseña SDD, NO escribe código)
+4. **Mockup** → Claude es diseñador (crea mockups navegables HTML)
+5. **Scaffold** → Claude es **scaffolder** (genera código + tests con TDD triple bucle)
+6. **Auditoría** → Claude es **auditor** (verifica trazabilidad, NO modifica código)
 
 ## Gates
 

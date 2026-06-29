@@ -99,9 +99,16 @@ resolverlo antes de la Fase 1. Un `stack.md` con `(definir)` revienta la Fase 3.
 3. Anuncia siempre en qué fase estás y qué vas a producir.
 4. **Invoca la skill de la fase** (cada fase tiene su propia skill: app-brainstorm,
    app-discovery, app-prd, etc.). Sigue sus instrucciones.
-   - **Fase 3 (Arquitectura)**: Carga el agente especializado `/load arquitecto` (o equivalente de OpenCode). El arquitecto genera architecture.md con autoridad sobre decisiones de diseño.
-   - **Fase 5 (Scaffold)**: Carga el agente especializado `/load scaffolder`. El scaffolder genera código con acceso completo (write, edit, bash, browser).
-   - **Fase 6 (Auditoría)**: Carga el agente especializado `/load auditor`. El auditor verifica trazabilidad y calidad con permisos de lectura (no modifica código).
+   
+   **En Claude Code:** No hay agentes formales. En cada fase cambio mi rol:
+   - **Fase 3**: Actúo como **arquitecto** (diseño puro, sin código)
+   - **Fase 5**: Actúo como **scaffolder** (genero código + tests)
+   - **Fase 6**: Actúo como **auditor** (verifico, no modifico)
+   
+   **En OpenCode:** Hay agentes especializados formales. El usuario carga:
+   - **Fase 3**: `/load arquitecto`
+   - **Fase 5**: `/load scaffolder`
+   - **Fase 6**: `/load auditor`
 5. **Captura en memoria lo que aprendas** (skill `app-memory`). Durante la fase,
    cuando tomes una decisión no obvia, resuelvas un bug que pueda volver, o
    descubras una restricción o rareza del stack, escríbelo en `.builder/memory/`
