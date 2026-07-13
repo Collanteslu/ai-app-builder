@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, v2]
+    branches: [main, v2, feature/*]
   pull_request:
     branches: [main, v2]
 
@@ -234,6 +234,9 @@ jobs:
     name: Instalación — scripts válidos
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Scripts de instalación
         run: |
           [ -f scripts/bootstrap.ps1 ] && echo "✅ bootstrap.ps1 existe"
@@ -241,6 +244,22 @@ jobs:
             echo "❌ install.sh tiene errores"; exit 1
           fi
           [ -f scripts/install.sh ] && echo "✅ install.sh es válido"
+      - name: PowerShell scripts válidos (sintaxis)
+        shell: pwsh
+        run: |
+          $errors = 0
+          $psScripts = Get-ChildItem -Path scripts -Filter "*.ps1" -Recurse
+          foreach ($script in $psScripts) {
+            try {
+              $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $script.FullName -Raw), [ref]$null)
+              Write-Host "✅ $($script.Name) sintaxis válida"
+            } catch {
+              Write-Host "❌ $($script.Name) tiene errores: $_"
+              $errors++
+            }
+          }
+          if ($errors -gt 0) { exit 1 }
+          Write-Host "✅ Todos los scripts PowerShell tienen sintaxis válida"
 
   # ──────────────────────────────────────────────────────────────────────────
   # Resumen (gate único de cierre)

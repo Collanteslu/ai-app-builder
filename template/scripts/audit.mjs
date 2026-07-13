@@ -70,7 +70,10 @@ for (const f of pages) {
     if (/audit-ignore/.test(before) || /audit-ignore/.test(prevLine)) continue;
     // Constante en UPPER_SNAKE_CASE = convención de config/enum, no datos mock.
     if (m[1] && /^[A-Z][A-Z0-9_]*$/.test(m[1])) continue;
-    const chunk = src.slice(m.index, m.index + 1200);
+    // Busca el cierre del array o un límite razonable (dinámico: hasta 5000 chars o primer cierre de array)
+    const endIdx = src.indexOf("];", m.index);
+    const chunkLen = endIdx > m.index && endIdx - m.index < 5000 ? endIdx - m.index + 2 : 2000;
+    const chunk = src.slice(m.index, m.index + chunkLen);
     if (!chunk.includes("{")) continue;
     const keys = new Set();
     for (const km of chunk.matchAll(/(\w+)\s*:\s*["'`\d]/g)) {

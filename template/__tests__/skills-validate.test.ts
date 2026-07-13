@@ -49,4 +49,12 @@ describe("skills - validación de SKILL.md", () => {
     expect(desc.length).toBeGreaterThan(0);
     expect(desc.length).toBeLessThanOrEqual(1024);
   });
+
+  it.each(skillDirs)("%s — tiene sección de contenido tras el frontmatter", (dir) => {
+    const skillPath = join(SKILLS_DIR, dir, "SKILL.md");
+    const content = readFileSync(skillPath, "utf-8");
+    const endFrontmatter = content.indexOf("---", 3);
+    const body = content.slice(endFrontmatter + 3).trim();
+    expect(body.length).toBeGreaterThan(50);
+  });
 });

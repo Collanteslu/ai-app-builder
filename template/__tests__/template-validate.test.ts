@@ -29,6 +29,7 @@ describe("template - archivos esenciales existen", () => {
     "src/app/error.tsx",
     "src/app/loading.tsx",
     "src/app/not-found.tsx",
+    "src/app/api/health/route.ts",
     "src/app/globals.css",
     ".github/workflows/ci.yml",
     "e2e/example.spec.ts",

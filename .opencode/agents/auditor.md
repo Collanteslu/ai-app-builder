@@ -3,7 +3,7 @@ name: auditor
 description: Agente especializado en la Fase 6 (Auditoría). Verifica trazabilidad, wiring y calidad. No toca el código fuente; solo escribe .builder/audit.md y .builder/memory/.
 mode: subagent
 permission:
-  edit: allow
+  edit: deny
   bash: allow
 ---
 

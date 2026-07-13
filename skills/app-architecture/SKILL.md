@@ -48,7 +48,7 @@ encaja la IA si la hay (producción / interno / solo desarrollo).
 Entidades, atributos, relaciones, claves e índices. Una tabla por entidad con
 sus campos. Marca qué entidad cubre qué requisito (RF-XX).
 
-**Regla de IDs fijos en seed:**
+**★ Regla de IDs fijos en seed:**
 Toda entidad que el frontend vaya a referenciar con un ID hardcodeado
 (ej: `userId: "seller-1"`, `roleId: "admin"`) debe especificar su ID fijo
 en el modelo de datos. No se permiten UUIDs autogenerados para estas entidades.
@@ -74,7 +74,7 @@ Toda entidad que aparece en el modelo de datos debe tener, como mínimo:
 - `PUT o PATCH /api/[entidad]/[id]` — actualizar (si la entidad es modificable)
 - `DELETE /api/[entidad]/[id]` — borrar (si aplica)
 
-**CREATE/EDIT SYMMETRY (regla de simetría):**
+**★ CREATE/EDIT SYMMETRY (regla de simetría):**
 Si existe `POST /api/[entidad]` (crear), debe existir `PUT /api/[entidad]/[id]` (editar).
 Si existe `*/[entidad]/new/page.tsx` (formulario de creación), debe existir
 `*/[entidad]/[id]/edit/page.tsx` (formulario de edición).
@@ -89,13 +89,13 @@ debe incluir el verbo, la ruta completa y el código de estado de éxito esperad
 Si el PRD tiene RNF de RGPD/seguridad: lista activos a proteger, amenazas,
 controles (autenticación, autorización, cifrado, auditoría) y qué RNF cubre cada uno.
 
-### 4b. Arquitectura de autenticación (obligatorio, siempre)
+### ★ 4b. Arquitectura de autenticación (obligatorio, siempre)
 El contrato de API debe incluir los endpoints de autenticación real (NextAuth):
 - `GET/POST /api/auth/[...nextauth]` — ruta catch-all de NextAuth
 - Especificar qué providers: credentials, Google, GitHub (según PRD)
 - El threat model debe asumir autenticación real desde el día 1, no simulada
 
-### 4c. Base de datos de test (obligatorio)
+### ★ 4c. Base de datos de test (obligatorio)
 La arquitectura debe especificar una base de datos PostgreSQL separada para tests:
 - Puerto: 5433 (distinto de la DB de desarrollo 5432)
 - Nombre: `app_test`
@@ -198,6 +198,10 @@ Para esta fase, los críticos que **bloquean** son `RF-SIN-ARQUITECTURA` (un RF 
 PRD sin entidad/endpoint que lo soporte) y `RF-FANTASMA` (un RF en la arquitectura
 que no existe en el PRD — scope creep). Si exit≠0, cierra el hueco antes de pasar
 a la Fase 4. Pega la salida real en el handoff.
+
+> ⚠️ Las reglas marcadas con `★` son **canónicas** en esta skill. La skill
+> `app-scaffold` las replica para tenerlas en contexto; si cambian aquí,
+> actualízalas también allí.
 
 ## Definition of Done
 

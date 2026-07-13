@@ -3,7 +3,7 @@ name: arquitecto
 description: Agente especializado en la Fase 3 (Arquitectura). Diseña modelo de datos, contrato de API y threat model. No escribe código de implementación; solo produce .builder/architecture.md y memorias.
 mode: subagent
 permission:
-  edit: allow
+  edit: deny
   bash: allow
 ---
 

@@ -535,6 +535,10 @@ pnpm db:test:up && pnpm test:e2e  # e2e contra test DB
 
 Si hay tests en rojo en prioridad alta: fija antes de cerrar.
 
+> ⚠️ Las reglas marcadas con `★` en `app-architecture` son canónicas. Esta skill
+> las replica para tenerlas en contexto; si ves una discrepancia, la fuente de
+> verdad es la skill de arquitectura.
+
 ## Definition of Done: BLOQUEANTES vs MEJORAS
 
 **BLOQUEANTE** (must-have para pasar a Fase 6): cierra Fase 5 solo si estos 6 items están ✓:
