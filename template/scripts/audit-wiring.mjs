@@ -77,8 +77,6 @@ const DATA_KEYS = [
   "id", "title", "name", "price", "description", "status", "email",
   "image", "img", "date", "amount", "rating", "stock", "sku", "category",
 ];
-let inlineCount = 0;
-
 for (const file of pageFiles) {
   const content = readFileSync(file, "utf8");
   let m;
@@ -93,7 +91,6 @@ for (const file of pageFiles) {
     }
     if (keys.size >= 2) {
       warn(`INLINE-DATA: ${posix(file)} contiene arrays de datos mock inline (${[...keys].join(", ")})`);
-      inlineCount++;
       break;
     }
   }

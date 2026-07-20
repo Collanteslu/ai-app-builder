@@ -34,7 +34,6 @@ const crit = (rule, where, msg) => critical.push({ rule, where, msg });
 const warn = (rule, where, msg) => warnings.push({ rule, where, msg });
 
 const read = (f) => (existsSync(f) ? readFileSync(f, "utf8") : null);
-const uniq = (arr) => [...new Set(arr)];
 // Cuenta SOLO IDs definidos (en inicio de línea), no menciones a mitad de frase.
 // Acepta tanto guión como subrayado: RF-01 y RF_01 se tratan igual (CU-02 vs CU_02).
 const idsOf = (txt, prefix) => {
