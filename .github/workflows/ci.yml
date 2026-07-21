@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: template/package.json
       - name: Check SKILL.md frontmatter
         run: |
           errors=0
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: template/package.json
       - name: opencode.json es JSON válido
         run: |
           if [ ! -f opencode.json ]; then
@@ -146,12 +146,16 @@ jobs:
         working-directory: template
     steps:
       - uses: actions/checkout@v4
+      # Las versiones de Node y pnpm se leen de template/package.json:
+      #   engines.node       → setup-node (soporta ranges, p.ej. ">=22.0.0")
+      #   packageManager     → pnpm/action-setup (lee "pnpm@<versión>")
+      # Una sola fuente de verdad: si cambias la versión, solo tocas el package.json.
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.10.0
+          package_json_file: template/package.json
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: template/package.json
           cache: pnpm
           cache-dependency-path: template/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
@@ -172,7 +176,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: template/package.json
       - name: audit.mjs pasa sobre el template limpio (exit 0)
         working-directory: template
         run: node scripts/audit.mjs
@@ -205,7 +209,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: template/package.json
       - name: Scripts .mjs del template son Node válido
         run: |
           for script in template/scripts/*.mjs; do
@@ -236,7 +240,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: template/package.json
       - name: Scripts de instalación
         run: |
           [ -f scripts/bootstrap.ps1 ] && echo "✅ bootstrap.ps1 existe"
