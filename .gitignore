@@ -41,5 +41,6 @@ out/
 # Builder artifacts (se generan durante el proceso)
 .builder/
 
-# Reasonix metadata (descomenta si usas Reasonix)
-# .reasonix/
+# Reasonix metadata local (sesiones, títulos de chat, snapshots del IDE).
+# Se regenera al usar Reasonix; no es código fuente.
+.reasonix/
