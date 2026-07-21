@@ -16,6 +16,44 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJ="$(pwd)"
 
 # ──────────────────────────────────────────────────────────────────────────
+# Flags opcionales
+# ──────────────────────────────────────────────────────────────────────────
+#   --project           instala en el directorio actual (modo proyecto, por defecto)
+#   --global            instala en ~/.claude/skills (modo global, solo skills)
+#   --help              muestra ayuda
+# ──────────────────────────────────────────────────────────────────────────
+
+MODE="project"
+PROJ="$(pwd)"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --project) MODE="project";;
+    --global)  MODE="global";;
+    -h|--help)
+      echo "Uso: install.sh [--project | --global]"
+      echo "  --project (defecto): instala en el cwd (.claude/, stack.md, git init)"
+      echo "  --global:            instala solo las skills en ~/.claude/skills"
+      exit 0
+      ;;
+    *)
+      echo "❌ Flag desconocido: $1. Usa --help para ver el uso."
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+if [ "$MODE" = "global" ]; then
+  PROJ="$HOME"
+fi
+
+# Asegurar que PROJ existe (si no, crearlo)
+if [ ! -d "$PROJ" ]; then
+  echo "📁 Creando directorio del proyecto: $PROJ"
+  mkdir -p "$PROJ"
+fi
+
+# ──────────────────────────────────────────────────────────────────────────
 # Verificaciones previas
 # ──────────────────────────────────────────────────────────────────────────
 
@@ -33,6 +71,22 @@ echo "╔═══════════════════════�
 echo "║         AI App Builder — Selector de plataforma               ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
+echo "Modo: $MODE   Destino: $PROJ"
+echo ""
+
+# Modo --global: solo skills a ~/.claude/skills (sin menú, sin git, sin stack.md)
+if [ "$MODE" = "global" ]; then
+  echo "🌍 Instalación global: copiando skills a ~/.claude/skills"
+  mkdir -p "$HOME/.claude/skills"
+  find "$REPO/skills" -mindepth 1 -maxdepth 1 -type d \
+    -exec cp -R {} "$HOME/.claude/skills/" \;
+  count=$(find "$REPO/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+  echo "✅ $count skills instaladas en ~/.claude/skills"
+  echo ""
+  echo "Las skills ya están disponibles globalmente en Claude Code."
+  exit 0
+fi
+
 echo "¿Con cuál plataforma usarás el AI App Builder?"
 echo ""
 echo "  1) Claude Code (CLI / Desktop / Web app)"
@@ -50,33 +104,99 @@ case "$platform_choice" in
 esac
 
 # ──────────────────────────────────────────────────────────────────────────
-# Helpers para symlinks seguros
+# Helpers
 # ──────────────────────────────────────────────────────────────────────────
+
+# Crear .gitignore mínimo para que un eventual `git add -A` no filtre secretos
+# locales del usuario (claves SSH, .env, dumps de BD, etc.).
+ensure_minimal_gitignore() {
+  local dir="$1"
+  local gi="$dir/.gitignore"
+  if [ -f "$gi" ]; then
+    return 0
+  fi
+  cat > "$gi" << 'GI_EOF'
+# Secretos y entorno (nunca commitear)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Dependencias y artefactos
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+
+# IDEs y OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/settings.json
+
+# Logs y cobertura
+*.log
+coverage/
+.nyc_output/
+
+# Reasonix
+.reasonix/
+.opencode/
+.claude/
+
+# Builder state
+.builder/
+GI_EOF
+}
 
 safe_symlink() {
   local target="$1"
   local link="$2"
+  local link_dir
+  link_dir="$(dirname -- "$link")"
+  local resolved_target
+  resolved_target="$(cd -- "$link_dir" && realpath -- "$target" 2>/dev/null || echo "")"
+  local resolved_link_dir
+  resolved_link_dir="$(cd -- "$link_dir" && pwd -P)"
+
+  # Defensa en profundidad: el target resuelto debe vivir bajo resolved_link_dir.
+  # Esto evita que un repo manipulado con `template -> /etc/...` filtre fuera del proyecto.
+  if [ -n "$resolved_target" ]; then
+    case "$resolved_target" in
+      "$resolved_link_dir"/*) ;;
+      *)
+        echo "  ❌ symlink bloqueado: $target → $resolved_target está fuera de $resolved_link_dir"
+        return 1
+        ;;
+    esac
+  fi
 
   # Si el link existe y es symlink, verificar que apunta a lo correcto
   if [ -L "$link" ]; then
-    local current=$(readlink "$link")
+    local current
+    current=$(readlink "$link")
     if [ "$current" = "$target" ]; then
       echo "  ℹ️  symlink ya existe: $link → $target"
       return 0
     else
       echo "  ⚠️  symlink existente apunta a otro lado, reemplazando..."
-      rm "$link"
+      rm -- "$link"
     fi
   fi
 
   # Si existe como directorio, borrar y crear symlink
   if [ -d "$link" ] && [ ! -L "$link" ]; then
     echo "  🗑️  directorio existente, reemplazando con symlink..."
-    rm -rf "$link"
+    rm -rf -- "$link"
   fi
 
   # Crear symlink
-  ln -s "$target" "$link"
+  ln -s -- "$target" "$link"
   echo "  ✅ symlink creado: $link → $target"
 }
 
@@ -171,14 +291,14 @@ EOF
     fi
   done
 
-  # git init y commit inicial si es nuevo
+  # git init y commit inicial si es nuevo (Claude Code)
   if [ ! -d "$PROJ/.git" ]; then
     cd "$PROJ"
     git init -q
     echo "    🔧 git init"
-    # Crear commit inicial de bootstrap
+    ensure_minimal_gitignore "$PROJ"
     git add -A
-    git commit -q -m "chore: bootstrap opencode builder" 2>/dev/null || true
+    git commit -q -m "chore: bootstrap claude code builder" 2>/dev/null || true
     echo "    ✅ commit inicial creado"
   fi
 
@@ -311,12 +431,12 @@ EOF
     fi
   done
 
-  # git init y commit inicial si es nuevo
+  # git init y commit inicial si es nuevo (OpenCode)
   if [ ! -d "$PROJ/.git" ]; then
     cd "$PROJ"
     git init -q
     echo "    🔧 git init"
-    # Crear commit inicial de bootstrap
+    ensure_minimal_gitignore "$PROJ"
     git add -A
     git commit -q -m "chore: bootstrap opencode builder" 2>/dev/null || true
     echo "    ✅ commit inicial creado"

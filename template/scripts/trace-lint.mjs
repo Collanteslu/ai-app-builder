@@ -34,6 +34,30 @@ const crit = (rule, where, msg) => critical.push({ rule, where, msg });
 const warn = (rule, where, msg) => warnings.push({ rule, where, msg });
 
 const read = (f) => (existsSync(f) ? readFileSync(f, "utf8") : null);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+// Parte un texto en bloques, uno por cada RF DEFINIDO (no meramente mencionado).
+// Un RF se considera definido solo si su ID abre una línea como encabezado o
+// ítem de lista (`## RF-01`, `### RF-01 —`, `- RF-01:`, `RF-01.`), no si aparece
+// citado a mitad de frase ("…también cubre RF-02…"). Así un RF mencionado dentro
+// del bloque de otro no genera un falso bloque sin criterios. El body de cada
+// bloque va hasta el siguiente RF definido, para comprobar criterios/prioridad.
+function splitByIds(txt, prefix) {
+  // Ancla: inicio de línea + posibles marcadores markdown (#, -, *, dígitos) y el ID.
+  // Acepta guión y subrayado: RF-01, RF_01, CU-02, CU_02 se tratan igual.
+  const re = new RegExp(`^[ \\t]*(?:#{1,6}\\s*|[-*]\\s*|\\d+[.)]\\s*)?(${prefix}[-_]\\d+)\\b`, "gm");
+  const marks = [];
+  let m;
+  while ((m = re.exec(txt)) !== null) marks.push({ id: m[1], index: m.index });
+  // Deduplica por id quedándonos con la PRIMERA aparición (el encabezado del RF).
+  const seen = new Set();
+  const heads = marks.filter((k) => (seen.has(k.id) ? false : seen.add(k.id)));
+  return heads.map((h, i) => ({
+    id: h.id,
+    body: txt.slice(h.index, i + 1 < heads.length ? heads[i + 1].index : txt.length),
+  }));
+}
+
 // Cuenta SOLO IDs definidos (en inicio de línea), no menciones a mitad de frase.
 // Acepta tanto guión como subrayado: RF-01 y RF_01 se tratan igual (CU-02 vs CU_02).
 const idsOf = (txt, prefix) => {
@@ -122,29 +146,6 @@ for (const [name, txt] of [["discovery.md", discovery], ["prd.md", prd], ["archi
   if (txt && /(^|\n)\s*(TODO|TBD|\(definir\)|pendiente de definir)\b/i.test(txt)) {
     warn("TODO-ABIERTO", name, "el artefacto tiene marcadores TODO/TBD/(definir) sin resolver.");
   }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-// Parte un texto en bloques, uno por cada RF DEFINIDO (no meramente mencionado).
-// Un RF se considera definido solo si su ID abre una línea como encabezado o
-// ítem de lista (`## RF-01`, `### RF-01 —`, `- RF-01:`, `RF-01.`), no si aparece
-// citado a mitad de frase ("…también cubre RF-02…"). Así un RF mencionado dentro
-// del bloque de otro no genera un falso bloque sin criterios. El body de cada
-// bloque va hasta el siguiente RF definido, para comprobar criterios/prioridad.
-function splitByIds(txt, prefix) {
-  // Ancla: inicio de línea + posibles marcadores markdown (#, -, *, dígitos) y el ID.
-  // Acepta guión y subrayado: RF-01, RF_01, CU-02, CU_02 se tratan igual.
-  const re = new RegExp(`^[ \\t]*(?:#{1,6}\\s*|[-*]\\s*|\\d+[.)]\\s*)?(${prefix}[-_]\\d+)\\b`, "gm");
-  const marks = [];
-  let m;
-  while ((m = re.exec(txt)) !== null) marks.push({ id: m[1], index: m.index });
-  // Deduplica por id quedándonos con la PRIMERA aparición (el encabezado del RF).
-  const seen = new Set();
-  const heads = marks.filter((k) => (seen.has(k.id) ? false : seen.add(k.id)));
-  return heads.map((h, i) => ({
-    id: h.id,
-    body: txt.slice(h.index, i + 1 < heads.length ? heads[i + 1].index : txt.length),
-  }));
 }
 
 // ── Informe ───────────────────────────────────────────────────────────────────

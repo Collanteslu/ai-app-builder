@@ -4,6 +4,11 @@
 //
 // Uso: node scripts/audit-wiring.mjs (o: pnpm audit:wiring)
 // Exit: 0 = OK, 1 = crítico encontrado
+//
+// Nota: este script es el "smoke test" rápido de wiring. La auditoría completa
+// (incluyendo los mismos checks con severidad, file:line y reporte estructurado)
+// vive en scripts/audit.mjs. Ejecuta AMBOS en CI: `audit:wiring` para feedback
+// rápido en Fase 5 (scaffold) y `audit:builder` como gate final de Fase 6.
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";

@@ -147,9 +147,13 @@ for (const svc of services) baseCount[svcKey(svc).tail] = (baseCount[svcKey(svc)
 for (const svc of services) {
   const { tail, needParent, parent } = svcKey(svc);
   // Si el basename colisiona con otro servicio, exige la ruta padre/base completa.
+  // Soporta también import dinámico (`await import(".../${tail}")`) que es muy
+  // común en Next.js (React.lazy, dynamic import, code splitting).
   const ambiguous = needParent && parent && baseCount[tail] > 1;
   const pattern = ambiguous ? `[/]${parent}[/]${tail}` : `[/]${tail}`;
-  const importRe = new RegExp(`(from\\s+|import\\(\\s*)["'\`][^"'\`]*${pattern}["'\`]`);
+  const importRe = new RegExp(
+    `(from\\s+|import\\(\\s*|require\\(\\s*)["'\`][^"'\`]*${pattern}["'\`]`
+  );
   const used = nonTestSrc.some((f) => f !== svc && importRe.test(read(f)));
   if (!used) {
     crit("ORPHAN-SERVICE", posix(svc), `el servicio no se usa en ningún endpoint ni componente (capa de lógica muerta). Cablea su uso en el route/página o elimínalo.`);
@@ -178,7 +182,7 @@ if (existsSync(e2eDir)) {
 }
 
 // ── 6. AVISO — test DB no aislada (si hay tests y Prisma) ──────────────────────
-const hasTests = files.some((f) => /\.test\.ts$/.test(posix(f)));
+const hasTests = files.some((f) => /\.test\.tsx?$/.test(posix(f)));
 const usesPrisma = existsSync(join(ROOT, "prisma", "schema.prisma"));
 if (hasTests && usesPrisma && !existsSync(join(ROOT, "docker-compose.test.yml"))) {
   warn("TEST-DB", "docker-compose.test.yml", "no existe la BD de test aislada; los tests comparten la BD de desarrollo.");

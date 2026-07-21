@@ -62,7 +62,7 @@ read -p "¿Continuar con la instalación de AI App Builder para Reasonix? (s/n):
 # ──────────────────────────────────────────────────────────────────────────
 
 TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR" EXIT
+trap 'rm -rf "$TMPDIR"' EXIT
 
 echo ""
 echo "⤓ Descargando constructor..."

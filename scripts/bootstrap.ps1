@@ -16,6 +16,10 @@
 
   Variables de entorno opcionales: AI_BUILDER_REPO, AI_BUILDER_BRANCH, AI_BUILDER_HOME.
 #>
+param(
+  [Parameter(Mandatory = $false, Position = 0)]
+  [string]$Project
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -26,7 +30,10 @@ $ErrorActionPreference = 'Stop'
 $repoUrl = if ($env:AI_BUILDER_REPO)   { $env:AI_BUILDER_REPO }   else { 'https://github.com/Collanteslu/ai-app-builder.git' }
 $branch  = if ($env:AI_BUILDER_BRANCH) { $env:AI_BUILDER_BRANCH } else { 'v2' }
 $cache   = if ($env:AI_BUILDER_HOME)   { $env:AI_BUILDER_HOME }   else { "$HOME\.ai-app-builder" }
-$proj    = (Get-Location).Path
+$proj    = if ($Project) { $Project } else { (Get-Location).Path }
+
+# Defensa contra path traversal: rechazar '..' en PROJ
+if ($proj -match '\.\.') { Write-Error "❌ La ruta no puede contener '..'."; exit 1 }
 
 # ──────────────────────────────────────────────────────────────────────────
 # Verificaciones previas

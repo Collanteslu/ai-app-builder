@@ -7,7 +7,15 @@
   1. Pregunta qué plataforma quieres
   2. Descarga el repo una sola vez
   3. Ejecuta el instalador correspondiente
+
+.PARAMETER Project
+  Ruta del proyecto destino (por defecto: el directorio actual).
 #>
+
+param(
+  [Parameter(Mandatory = $false, Position = 0)]
+  [string]$Project
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -56,7 +64,8 @@ Write-Host "⤓ Descargando constructor..."
 git clone --depth 1 --branch v2 https://github.com/Collanteslu/ai-app-builder.git $tmpDir -q
 
 $repoDir = $tmpDir
-$proj = (Get-Location).Path
+$proj = if ($Project) { $Project } else { (Get-Location).Path }
+if ($proj -match '\.\.') { Write-Error "❌ La ruta no puede contener '..'."; exit 1 }
 
 # ──────────────────────────────────────────────────────────────────────────
 # Funciones comunes
@@ -92,12 +101,42 @@ function Install-Claude {
   }
 
   # Config
-  Copy-Item (Join-Path $repoDir 'config\stack.md') "$proj\stack.md" -ErrorAction SilentlyContinue
-  Copy-Item (Join-Path $repoDir 'config\model-profiles.md') "$proj\model-profiles.md" -ErrorAction SilentlyContinue
+  if (-not (Test-Path "$proj\stack.md")) {
+    Copy-Item (Join-Path $repoDir 'config\stack.md') "$proj\stack.md" -ErrorAction SilentlyContinue
+  }
+  if (-not (Test-Path "$proj\model-profiles.md")) {
+    Copy-Item (Join-Path $repoDir 'config\model-profiles.md') "$proj\model-profiles.md" -ErrorAction SilentlyContinue
+  }
 
   # .gitignore
   if (-not (Test-Path "$proj\.gitignore")) {
-    Copy-Item (Join-Path $repoDir '.gitignore') "$proj\.gitignore"
+    $gitignoreContent = @"
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/settings.json
+*.log
+coverage/
+.nyc_output/
+.reasonix/
+.opencode/
+.claude/
+.builder/
+"@
+    Set-Content -Path "$proj\.gitignore" -Value $gitignoreContent -Encoding UTF8
   }
 
   # git init
@@ -113,6 +152,150 @@ function Install-Claude {
   Write-Host "Próximos pasos:"
   Write-Host "  1. Edita stack.md"
   Write-Host "  2. Abre Claude Code y di: 'Quiero crear una aplicación para [tu idea]'"
+  Write-Host ""
+}
+
+function Install-OpenCode {
+  Write-Host ""
+  Write-Host "📦 Instalando para OpenCode..."
+  Write-Host ""
+
+  New-Item -ItemType Directory -Force -Path "$proj\.opencode" | Out-Null
+
+  # Skills (linked to Claude if exists, otherwise copied)
+  Write-Host "  • Instalando skills..."
+  if (Test-Path "$proj\.claude\skills") {
+    # Reutilizar las skills de Claude si ya están instaladas (symlink inteligente)
+    New-Item -ItemType Directory -Force -Path "$proj\.opencode\skills" | Out-Null
+    $linkTarget = Join-Path $proj '.opencode\skills'
+    $linkSource = '..\.claude\skills'
+    if (-not (Test-Path $linkTarget)) {
+      New-Item -ItemType SymbolicLink -Path $linkTarget -Target $linkSource -Force | Out-Null
+      Write-Host "    🔗 Skills linked: .opencode/skills → .claude/skills"
+    }
+  } else {
+    New-Item -ItemType Directory -Force -Path "$proj\.opencode\skills" | Out-Null
+    Copy-Item -Recurse -Force -Path (Join-Path $repoDir 'skills\*') -Destination "$proj\.opencode\skills"
+    $count = (Get-ChildItem -Directory (Join-Path $repoDir 'skills')).Count
+    Write-Host "    ✅ $count skills"
+  }
+
+  # Template (solo se copia bajo Claude; OpenCode lo referencia desde ahí)
+  # En PowerShell no creamos .opencode/template para evitar duplicación; OpenCode
+  # lee el template desde .claude/template si existe.
+
+  # Agents
+  Write-Host "  • Instalando agents..."
+  if (Test-Path "$repoDir\.opencode\agents") {
+    New-Item -ItemType Directory -Force -Path "$proj\.opencode\agents" | Out-Null
+    Get-ChildItem -Path (Join-Path $repoDir '.opencode\agents') |
+      Copy-Item -Recurse -Force -Destination "$proj\.opencode\agents"
+    Write-Host "    ✅ arquitecto, scaffolder, auditor"
+  }
+
+  # Instructions
+  if (Test-Path "$repoDir\.opencode\instructions") {
+    New-Item -ItemType Directory -Force -Path "$proj\.opencode\instructions" | Out-Null
+    Get-ChildItem -Path (Join-Path $repoDir '.opencode\instructions') |
+      Copy-Item -Recurse -Force -Destination "$proj\.opencode\instructions"
+  }
+
+  # Commands
+  if (Test-Path "$repoDir\.opencode\commands") {
+    New-Item -ItemType Directory -Force -Path "$proj\.opencode\commands" | Out-Null
+    Get-ChildItem -Path (Join-Path $repoDir '.opencode\commands') |
+      Copy-Item -Recurse -Force -Destination "$proj\.opencode\commands"
+  }
+
+  # OPENCODE.md + opencode.json
+  if (-not (Test-Path "$proj\OPENCODE.md")) {
+    # No existe en el repo upstream; lo creamos desde un heredoc local.
+    $opencodeMd = @"
+# AI App Builder — Instrucciones para OpenCode
+
+Este proyecto usa el **AI App Builder** — un proceso profesional de 6 fases.
+
+## Flujo principal
+
+``````bash
+opencode
+# Luego en el chat: /build-app quiero crear una aplicación para [tu idea]
+``````
+
+## 6 Fases
+
+1. **Discovery** → Descubridor extrae CU-XX (casos de uso)
+2. **PRD** → Analista define RF-XX (requisitos con criterios)
+3. **Arquitectura** → Arquitecto diseña SDD (read-only en código)
+4. **Mockup** → Diseñador crea mockups navegables
+5. **Scaffold** → Scaffolder genera código + tests TDD (full write/edit)
+6. **Auditoría** → Auditor verifica trazabilidad (read-only, audit-only)
+
+## Agentes disponibles
+
+- **arquitecto** (Fase 3) — diseño técnico SDD
+- **scaffolder** (Fase 5) — código + tests
+- **auditor** (Fase 6) — trazabilidad y calidad
+
+Usa `/load arquitecto`, `/load scaffolder`, `/load auditor` según la fase.
+"@
+    Set-Content -Path "$proj\OPENCODE.md" -Value $opencodeMd -Encoding UTF8
+    Write-Host "    ✅ OPENCODE.md"
+  }
+  if (-not (Test-Path "$proj\opencode.json")) {
+    Copy-Item (Join-Path $repoDir 'opencode.json') "$proj\opencode.json" -ErrorAction SilentlyContinue
+    Write-Host "    ✅ opencode.json"
+  }
+
+  # Config
+  if (-not (Test-Path "$proj\stack.md")) {
+    Copy-Item (Join-Path $repoDir 'config\stack.md') "$proj\stack.md" -ErrorAction SilentlyContinue
+  }
+
+  # .gitignore
+  if (-not (Test-Path "$proj\.gitignore")) {
+    $gitignoreContent = @"
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/settings.json
+*.log
+coverage/
+.nyc_output/
+.reasonix/
+.opencode/
+.claude/
+.builder/
+"@
+    Set-Content -Path "$proj\.gitignore" -Value $gitignoreContent -Encoding UTF8
+  }
+
+  # git init
+  if (-not (Test-Path "$proj\.git")) {
+    git -C $proj init -q
+    git -C $proj add -A
+    git -C $proj commit -q -m "chore: bootstrap opencode" 2>$null
+  }
+
+  Write-Host ""
+  Write-Host "✅ Instalación completada para OpenCode"
+  Write-Host ""
+  Write-Host "Próximos pasos:"
+  Write-Host "  1. Edita stack.md"
+  Write-Host "  2. Abre OpenCode y di: 'Quiero crear una aplicación para [tu idea]'"
   Write-Host ""
 }
 
@@ -197,11 +380,39 @@ api_key_env = "DEEPSEEK_API_KEY"
   }
 
   # Config
-  Copy-Item (Join-Path $repoDir 'config\stack.md') "$proj\stack.md" -ErrorAction SilentlyContinue
+  if (-not (Test-Path "$proj\stack.md")) {
+    Copy-Item (Join-Path $repoDir 'config\stack.md') "$proj\stack.md" -ErrorAction SilentlyContinue
+  }
 
   # .gitignore
   if (-not (Test-Path "$proj\.gitignore")) {
-    Copy-Item (Join-Path $repoDir '.gitignore') "$proj\.gitignore"
+    $gitignoreContent = @"
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/settings.json
+*.log
+coverage/
+.nyc_output/
+.reasonix/
+.opencode/
+.claude/
+.builder/
+"@
+    Set-Content -Path "$proj\.gitignore" -Value $gitignoreContent -Encoding UTF8
   }
 
   # git init
@@ -227,17 +438,16 @@ api_key_env = "DEEPSEEK_API_KEY"
 
 switch ($choice) {
   "1" { Install-Claude }
-  "2" { Write-Host "Para OpenCode en Windows, usa Bash (Git Bash / WSL)" }
+  "2" { Install-OpenCode }
   "3" { Install-Reasonix }
   "4" {
     Write-Host ""
     Write-Host "📦 Instalando para todas las plataformas..."
     Install-Claude
-    Write-Host ""
-    Write-Host "Para OpenCode, ejecuta en Git Bash:"
-    Write-Host "  bash <(curl -fsSL https://raw.githubusercontent.com/Collanteslu/ai-app-builder/v2/scripts/install.sh)"
-    Write-Host ""
+    Install-OpenCode
     Install-Reasonix
+    Write-Host ""
+    Write-Host "✅ Instalación múltiple completada"
   }
 }
 

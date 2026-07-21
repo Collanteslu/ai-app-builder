@@ -313,7 +313,7 @@ bash /ruta/a/ai-app-builder/scripts/install.sh --project
 Esto deja **todo dentro de `mi-app`**: `.claude\skills\` (las 41 skills, solo para
 esta app), `stack.md` y `model-profiles.md`. No toca tu sistema ni otros proyectos.
 
-**Global** (sin `-Project`/`--project`) copia a `~/.claude/skills`. O a mano:
+**Global** (sin `--project`/`--global`) copia a `~/.claude/skills`. O a mano:
 
 ```bash
 cp -r skills/* ~/.claude/skills/        # global

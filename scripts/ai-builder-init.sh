@@ -57,12 +57,67 @@ esac
 # ──────────────────────────────────────────────────────────────────────────
 
 TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR" EXIT
+trap 'rm -rf "$TMPDIR"' EXIT
 
 echo "📥 Descargando AI App Builder..."
 git clone --quiet --depth 1 --branch "$BRANCH" https://github.com/Collanteslu/ai-app-builder.git "$TMPDIR" 2>/dev/null || {
   echo "❌ Error descargando repositorio. Verifica tu conexión a internet."
   exit 1
+}
+# Mostrar el commit exacto que se va a instalar (transparencia + revisión manual
+# de la integridad del repo upstream antes de ejecutar nada).
+CLONE_COMMIT="$(git -C "$TMPDIR" rev-parse HEAD 2>/dev/null || echo 'desconocido')"
+echo "    🔖 Commit instalado: $CLONE_COMMIT"
+echo "    💡 Verifica en: https://github.com/Collanteslu/ai-app-builder/commit/$CLONE_COMMIT"
+
+# ──────────────────────────────────────────────────────────────────────────
+# Helpers (definidos antes del case para reutilizar en todas las ramas)
+# ──────────────────────────────────────────────────────────────────────────
+
+# Crear .gitignore mínimo para que `git add -A` no filtre secretos locales.
+ensure_minimal_gitignore() {
+  local dir="${1:-$PROJ}"
+  local gi="$dir/.gitignore"
+  if [ -f "$gi" ]; then
+    return 0
+  fi
+  cat > "$gi" << 'GI_EOF'
+# Secretos y entorno (nunca commitear)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Dependencias y artefactos
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+
+# IDEs y OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/settings.json
+
+# Logs y cobertura
+*.log
+coverage/
+.nyc_output/
+
+# Reasonix / OpenCode / Claude
+.reasonix/
+.opencode/
+.claude/
+
+# Builder state
+.builder/
+GI_EOF
 }
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -87,6 +142,7 @@ case "$choice" in
 
     # Git init
     if [ ! -d ".git" ]; then
+      ensure_minimal_gitignore "$PROJ"
       git init -q && echo "🔧 git init"
     fi
 
@@ -109,12 +165,51 @@ case "$choice" in
     echo "✅ OpenCode instalado"
 
     # Copiar archivos de config
-    [ ! -f "OPENCODE.md" ] && cp "$TMPDIR/OPENCODE.md" . && echo "📄 OPENCODE.md"
+    # OPENCODE.md no existe en el repo upstream (se genera localmente);
+    # si está en $TMPDIR lo copiamos, si no, lo creamos desde heredoc.
+    if [ ! -f "OPENCODE.md" ]; then
+      if [ -f "$TMPDIR/OPENCODE.md" ]; then
+        cp "$TMPDIR/OPENCODE.md" .
+      else
+        cat > OPENCODE.md << 'OPENCODE_EOF'
+# AI App Builder — Instrucciones para OpenCode
+
+Este proyecto usa el **AI App Builder** — un proceso profesional de 6 fases
+para construir aplicaciones con trazabilidad de requisitos (RF-XX).
+
+## Flujo principal
+
+```bash
+opencode
+# Luego en el chat: /build-app quiero crear una aplicación para [tu idea]
+```
+
+## 6 Fases de construcción
+
+1. **Discovery** → Descubridor extrae CU-XX (casos de uso)
+2. **PRD** → Analista define RF-XX (requisitos con criterios)
+3. **Arquitectura** → Arquitecto diseña SDD (read-only en código)
+4. **Mockup** → Diseñador crea mockups navegables
+5. **Scaffold** → Scaffolder genera código + tests TDD (full write/edit)
+6. **Auditoría** → Auditor verifica trazabilidad (read-only, audit-only)
+
+## Agentes disponibles
+
+- **arquitecto** (Fase 3) — diseño técnico SDD
+- **scaffolder** (Fase 5) — código + tests
+- **auditor** (Fase 6) — trazabilidad y calidad
+
+Usa `/load arquitecto`, `/load scaffolder`, `/load auditor` según la fase.
+OPENCODE_EOF
+      fi
+      echo "📄 OPENCODE.md"
+    fi
     [ ! -f "opencode.json" ] && cp "$TMPDIR/opencode.json" . && echo "📄 opencode.json"
     [ ! -f "stack.md" ] && cp "$TMPDIR/config/stack.md" . && echo "📄 stack.md"
 
     # Git init
     if [ ! -d ".git" ]; then
+      ensure_minimal_gitignore "$PROJ"
       git init -q && echo "🔧 git init"
     fi
 
@@ -135,12 +230,51 @@ case "$choice" in
     echo "✅ Reasonix instalado"
 
     # Copiar archivos de config
-    [ ! -f "REASONIX.md" ] && cp "$TMPDIR/REASONIX.md" . && echo "📄 REASONIX.md"
+    # REASONIX.md se genera localmente (no viene en $TMPDIR).
+    if [ ! -f "REASONIX.md" ]; then
+      if [ -f "$TMPDIR/REASONIX.md" ]; then
+        cp "$TMPDIR/REASONIX.md" .
+      else
+        cat > REASONIX.md << 'REASONIX_EOF'
+# AI App Builder — Instrucciones para Reasonix
+
+Este proyecto usa el **AI App Builder** — un proceso profesional de 6 fases
+para construir aplicaciones con trazabilidad de requisitos (RF-XX).
+
+## Flujo principal
+
+```bash
+reasonix /build-app quiero crear una aplicación para [tu idea]
+```
+
+## 6 Fases de construcción
+
+1. **Discovery** → Descubridor extrae CU-XX (casos de uso)
+2. **PRD** → Analista define RF-XX (requisitos con criterios)
+3. **Arquitectura** → Arquitecto diseña SDD (read-only en código)
+4. **Mockup** → Diseñador crea mockups navegables
+5. **Scaffold** → Scaffolder genera código + tests TDD (full write/edit)
+6. **Auditoría** → Auditor verifica trazabilidad (read-only, audit-only)
+
+## Agentes como roles (no carga explícita)
+
+En Reasonix, **NO hay `/load agente`**. En su lugar, cada fase asume un **rol**:
+
+- **Fase 3 (Arquitectura)**: Eres arquitecto
+- **Fase 5 (Scaffold)**: Eres scaffolder
+- **Fase 6 (Auditoría)**: Eres auditor
+
+Reasonix detecta automáticamente en qué fase estás y aplica los constraints correctos.
+REASONIX_EOF
+      fi
+      echo "📄 REASONIX.md"
+    fi
     [ ! -f "REASONIX_QUICK_START.md" ] && cp "$TMPDIR/REASONIX_QUICK_START.md" . && echo "📄 REASONIX_QUICK_START.md"
     [ ! -f "stack.md" ] && cp "$TMPDIR/config/stack.md" . && echo "📄 stack.md"
 
     # Git init
     if [ ! -d ".git" ]; then
+      ensure_minimal_gitignore "$PROJ"
       git init -q && echo "🔧 git init"
     fi
 
@@ -166,18 +300,71 @@ case "$choice" in
     echo "  ✓ Fase 2: OpenCode"
     mkdir -p ".opencode/agents" ".opencode/instructions" ".opencode/commands"
     [ -d "$TMPDIR/.opencode/agents" ] && cp -R "$TMPDIR/.opencode/agents/"* ".opencode/agents/" 2>/dev/null || true
-    ln -sf "../.claude/skills" ".opencode/skills" 2>/dev/null || true
+    cd "$PROJ" 2>/dev/null || cd .
+    ln -sf -- "../.claude/skills" ".opencode/skills" 2>/dev/null || true
     echo "    🔗 Skills linked: .opencode/skills → .claude/skills"
-    [ ! -f "OPENCODE.md" ] && cp "$TMPDIR/OPENCODE.md" . && echo "    📄 OPENCODE.md"
+    if [ ! -f "OPENCODE.md" ]; then
+      if [ -f "$TMPDIR/OPENCODE.md" ]; then
+        cp "$TMPDIR/OPENCODE.md" .
+      else
+        cat > OPENCODE.md << 'OPENCODE_EOF'
+# AI App Builder — Instrucciones para OpenCode
+
+Este proyecto usa el **AI App Builder** — un proceso profesional de 6 fases.
+
+## Flujo principal
+
+```bash
+opencode
+# Luego en el chat: /build-app quiero crear una aplicación para [tu idea]
+```
+
+## 6 Fases
+
+1. **Discovery** → Descubridor extrae CU-XX
+2. **PRD** → Analista define RF-XX
+3. **Arquitectura** → Arquitecto diseña SDD (read-only en código)
+4. **Mockup** → Diseñador crea mockups
+5. **Scaffold** → Scaffolder genera código + tests
+6. **Auditoría** → Auditor verifica trazabilidad
+
+Usa `/load arquitecto`, `/load scaffolder`, `/load auditor` según la fase.
+OPENCODE_EOF
+      fi
+      echo "    📄 OPENCODE.md"
+    fi
     [ ! -f "opencode.json" ] && cp "$TMPDIR/opencode.json" . && echo "    📄 opencode.json"
 
     # Reasonix (con symlink)
     echo "  ✓ Fase 3: Reasonix"
     mkdir -p ".reasonix/agents"
     [ -d "$TMPDIR/.reasonix/agents" ] && cp -R "$TMPDIR/.reasonix/agents/"* ".reasonix/agents/" 2>/dev/null || true
-    ln -sf "../.claude/skills" ".reasonix/skills" 2>/dev/null || true
+    ln -sf -- "../.claude/skills" ".reasonix/skills" 2>/dev/null || true
     echo "    🔗 Skills linked: .reasonix/skills → .claude/skills"
-    [ ! -f "REASONIX.md" ] && cp "$TMPDIR/REASONIX.md" . && echo "    📄 REASONIX.md"
+    if [ ! -f "REASONIX.md" ]; then
+      if [ -f "$TMPDIR/REASONIX.md" ]; then
+        cp "$TMPDIR/REASONIX.md" .
+      else
+        cat > REASONIX.md << 'REASONIX_EOF'
+# AI App Builder — Instrucciones para Reasonix
+
+Este proyecto usa el **AI App Builder** — un proceso profesional de 6 fases.
+
+## Flujo principal
+
+```bash
+reasonix /build-app quiero crear una aplicación para [tu idea]
+```
+
+## Agentes como roles
+
+Fase 3: Eres **arquitecto** (read-only código, write architecture.md)
+Fase 5: Eres **scaffolder** (full write/edit/bash)
+Fase 6: Eres **auditor** (read-only código, write audit.md)
+REASONIX_EOF
+      fi
+      echo "    📄 REASONIX.md"
+    fi
 
     # Config común
     [ ! -f "stack.md" ] && cp "$TMPDIR/config/stack.md" . && echo "📄 stack.md"
@@ -185,6 +372,7 @@ case "$choice" in
 
     # Git init
     if [ ! -d ".git" ]; then
+      ensure_minimal_gitignore "$PROJ"
       git init -q && echo "🔧 git init"
     fi
 

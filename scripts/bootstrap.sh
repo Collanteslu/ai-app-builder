@@ -20,7 +20,33 @@ set -euo pipefail
 REPO_URL="${AI_BUILDER_REPO:-https://github.com/Collanteslu/ai-app-builder.git}"
 BRANCH="${AI_BUILDER_BRANCH:-v2}"
 CACHE="${AI_BUILDER_HOME:-$HOME/.ai-app-builder}"
-PROJ="${1:-$(pwd)}"
+
+# 2) Instalar en el proyecto (directorio actual por defecto)
+# Acepta tanto argumento posicional como --project PATH (paridad con install.sh).
+PROJ_ARG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --project) shift; PROJ_ARG="${1:-}";;
+    --project=*) PROJ_ARG="${1#--project=}";;
+    -h|--help)
+      echo "Uso: bootstrap.sh [PATH_PROYECTO] [--project PATH]"
+      exit 0
+      ;;
+    -*)
+      echo "❌ Flag desconocido: $1"; exit 1
+      ;;
+    *)
+      if [ -z "$PROJ_ARG" ]; then PROJ_ARG="$1"; fi
+      ;;
+  esac
+  shift
+done
+PROJ="${PROJ_ARG:-$(pwd)}"
+
+# Normalizar PROJ (defensa contra path traversal si alguien lo invoca con ../..)
+case "$PROJ" in
+  *..*) echo "❌ PROJ no puede contener '..': $PROJ"; exit 1;;
+esac
 
 command -v git >/dev/null 2>&1 || { echo "❌ Necesitas git instalado." >&2; exit 1; }
 
@@ -33,6 +59,11 @@ else
   echo "⤓ Descargando el constructor en $CACHE"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$CACHE" -q
 fi
+
+# Mostrar commit exacto para auditoría manual
+CACHE_COMMIT="$(git -C "$CACHE" rev-parse HEAD 2>/dev/null || echo 'desconocido')"
+echo "🔖 Commit del constructor: $CACHE_COMMIT"
+echo "💡 Verifica en: https://github.com/Collanteslu/ai-app-builder/commit/$CACHE_COMMIT"
 
 # 2) Instalar en el proyecto (directorio actual por defecto)
 mkdir -p "$PROJ/.claude/skills"
@@ -60,7 +91,39 @@ for f in stack.md model-profiles.md; do
   fi
 done
 
-if [ ! -d "$PROJ/.git" ]; then git -C "$PROJ" init -q; echo "🔧 git init"; fi
+# Crear .gitignore mínimo (no sobrescribe uno existente) y luego git init.
+if [ ! -d "$PROJ/.git" ]; then
+  if [ ! -f "$PROJ/.gitignore" ]; then
+    cat > "$PROJ/.gitignore" << 'GI_EOF'
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/settings.json
+*.log
+coverage/
+.nyc_output/
+.reasonix/
+.opencode/
+.claude/
+.builder/
+GI_EOF
+  fi
+  git -C "$PROJ" init -q
+  echo "🔧 git init"
+fi
 
 # 3) Explicar cómo lanzar el build-app
 cat <<EOF
